@@ -21,7 +21,6 @@ data class HabitSummary(
     val monthSpentUnits: Double = 0.0,
     val todaySavedUnits: Double = 0.0,
     val lastSmokedTimestamp: Long? = null,
-    // "The Mirror" pace projections (based on 7-day average)
     val paceMonthlyCigs: Double = 0.0,
     val paceYearlyCigs: Double = 0.0,
     val paceYearlyUnits: Double = 0.0
@@ -89,14 +88,20 @@ class CigaretteRepository(
             monthSmokedFlow,
             latestSmokedFlow,
             settingsFlow
-        ) { todaySmoked, todaySkipped, weekSmoked, monthSmoked, latestSmoked, settings ->
+        ) { args: Array<Any?> ->
+            val todaySmoked = args[0] as Int
+            val todaySkipped = args[1] as Int
+            val weekSmoked = args[2] as Int
+            val monthSmoked = args[3] as Int
+            val latestSmoked = args[4] as CigaretteLog?
+            val settings = args[5] as UserSettings
+
             val price = settings.pricePerCigarette
             val todaySpent = CalculationUtils.calculateSpent(todaySmoked, price)
             val todaySkippedSaved = CalculationUtils.calculateSpent(todaySkipped, price)
             val weekSpent = CalculationUtils.calculateSpent(weekSmoked, price)
             val monthSpent = CalculationUtils.calculateSpent(monthSmoked, price)
 
-            // "The Mirror" 7-day average pace
             val dailyAvg = weekSmoked / 7.0
             val paceMonthCigs = dailyAvg * 30.0
             val paceYearCigs = dailyAvg * 365.0
@@ -193,7 +198,6 @@ class CigaretteRepository(
 
     suspend fun getAllLogs(): List<CigaretteLog> = dao.getAllLogs()
 
-    // Offline JSON Backup & Restore
     suspend fun exportBackupJson(): String {
         val allLogs = dao.getAllLogs()
         val settings = preferencesRepository.getSettings()
