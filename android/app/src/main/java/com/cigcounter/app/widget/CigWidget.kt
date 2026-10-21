@@ -114,8 +114,7 @@ class CigWidget : GlanceAppWidget() {
                     Column(
                         modifier = GlanceModifier
                             .defaultWeight()
-                            .fillMaxSize()
-                            .clickable(actionStartActivity<MainActivity>()),
+                            .fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
