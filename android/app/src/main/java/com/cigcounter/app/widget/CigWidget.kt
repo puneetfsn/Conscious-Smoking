@@ -153,8 +153,7 @@ class CigWidget : GlanceAppWidget() {
                         .fillMaxWidth()
                         .background(surfaceColor)
                         .cornerRadius(10.dp)
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
