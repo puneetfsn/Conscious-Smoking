@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="100dp"
+    android:viewportWidth="200"
+    android:viewportHeight="100">
+    <!-- Rounded background container -->
+    <path
+        android:fillColor="#FF18181B"
+        android:pathData="M16,0 H184 A16,16 0 0 1 200,16 V84 A16,16 0 0 1 184,100 H16 A16,16 0 0 1 0,84 V16 A16,16 0 0 1 16,0 Z" />
+    <!-- Big round + button preview -->
+    <path
+        android:fillColor="#FFFF6E40"
+        android:pathData="M42,50 m-28,0 a28,28 0 1,0 56,0 a28,28 0 1,0 -56,0" />
+    <!-- Plus symbol inside button -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M39,36h6v28h-6z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M28,47h28v6h-28z" />
+    <!-- Indicator lines for stats -->
+    <path
+        android:fillColor="#FF3F3F46"
+        android:pathData="M84,24h100v8h-100z" />
+    <path
+        android:fillColor="#FF3F3F46"
+        android:pathData="M84,40h100v8h-100z" />
+    <path
+        android:fillColor="#FF3F3F46"
+        android:pathData="M84,56h100v8h-100z" />
+    <path
+        android:fillColor="#FF27272A"
+        android:pathData="M84,74h90v6h-90z" />
+</vector>

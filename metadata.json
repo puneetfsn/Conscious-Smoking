@@ -1,0 +1,6 @@
+{
+  "name": "CigCounter - Android App & Widget Project Generator",
+  "description": "Production-ready, offline, private Android cigarette tracker and home-screen widget built with Kotlin, Jetpack Compose, Glance, and Room.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

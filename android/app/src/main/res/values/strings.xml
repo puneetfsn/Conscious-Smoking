@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SmokeLedger</string>
+    <string name="widget_name">SmokeLedger Tracker</string>
+    <string name="widget_description">Quickly log habits, view spend impact, and cultivate gentle replacement habits right from your home screen.</string>
+</resources>
