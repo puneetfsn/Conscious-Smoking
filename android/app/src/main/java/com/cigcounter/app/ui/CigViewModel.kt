@@ -324,7 +324,7 @@ class CigViewModel(
             context = app,
             logs = recentLogs.value,
             pricePerUnit = summary.pricePerUnit,
-            currencySymbol = settings.value.currencySymbol,
+            
             liveSecondsSinceLast = liveSecondsSinceLast.value
         )
     }
