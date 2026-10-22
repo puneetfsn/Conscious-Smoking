@@ -23,7 +23,16 @@ data class HabitSummary(
     val lastSmokedTimestamp: Long? = null,
     val paceMonthlyCigs: Double = 0.0,
     val paceYearlyCigs: Double = 0.0,
-    val paceYearlyUnits: Double = 0.0
+    val paceYearlyUnits: Double = 0.0,
+    val consecutiveSmokingDays: Int = 0,
+    val smokedToday: Boolean = false
+)
+
+data class HourlyTriggerData(
+    val hourCounts: List<Int> = List(24) { 0 },
+    val peakHour: Int? = null,
+    val peakCount: Int = 0,
+    val totalSmoked: Int = 0
 )
 
 data class DayStat(
@@ -77,6 +86,7 @@ class CigaretteRepository(
         val startOfToday = DateRangeUtils.getStartOfTodayMillis()
         val startOfWeek = DateRangeUtils.getWeekStartMillis()
         val startOfMonth = DateRangeUtils.getMonthStartMillis()
+        val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24L * 3600L * 1000L)
 
         val todaySmokedFlow = dao.countSmokedFromFlow(startOfToday)
         val todaySkippedFlow = dao.countSkippedFromFlow(startOfToday)
@@ -84,6 +94,7 @@ class CigaretteRepository(
         val monthSmokedFlow = dao.countSmokedFromFlow(startOfMonth)
         val latestSmokedFlow = dao.getLatestSmokedFlow()
         val settingsFlow = preferencesRepository.settingsFlow
+        val recentLogsFlow = dao.getLogsFromFlow(ninetyDaysAgo)
 
         return combine(
             todaySmokedFlow,
@@ -91,7 +102,8 @@ class CigaretteRepository(
             weekSmokedFlow,
             monthSmokedFlow,
             latestSmokedFlow,
-            settingsFlow
+            settingsFlow,
+            recentLogsFlow
         ) { args: Array<Any?> ->
             val todaySmoked = args[0] as Int
             val todaySkipped = args[1] as Int
@@ -99,6 +111,8 @@ class CigaretteRepository(
             val monthSmoked = args[3] as Int
             val latestSmoked = args[4] as CigaretteLog?
             val settings = args[5] as UserSettings
+            @Suppress("UNCHECKED_CAST")
+            val recentLogs = args[6] as List<CigaretteLog>
 
             val price = settings.pricePerCigarette
             val todaySpent = CalculationUtils.calculateSpent(todaySmoked, price)
@@ -110,6 +124,30 @@ class CigaretteRepository(
             val paceMonthCigs = dailyAvg * 30.0
             val paceYearCigs = dailyAvg * 365.0
             val paceYearUnits = paceYearCigs * price
+
+            val zone = java.time.ZoneId.systemDefault()
+            val smokedDates = recentLogs
+                .filter { !it.isSkipped }
+                .map { java.time.Instant.ofEpochMilli(it.timestampMillis).atZone(zone).toLocalDate() }
+                .toSet()
+
+            val today = java.time.LocalDate.now(zone)
+            val hasSmokedToday = todaySmoked > 0 || smokedDates.contains(today)
+            var streak = 0
+            if (hasSmokedToday) {
+                streak = 1
+                var checkDate = today.minusDays(1)
+                while (smokedDates.contains(checkDate)) {
+                    streak++
+                    checkDate = checkDate.minusDays(1)
+                }
+            } else {
+                var checkDate = today.minusDays(1)
+                while (smokedDates.contains(checkDate)) {
+                    streak++
+                    checkDate = checkDate.minusDays(1)
+                }
+            }
 
             HabitSummary(
                 todayCount = todaySmoked,
@@ -125,7 +163,9 @@ class CigaretteRepository(
                 lastSmokedTimestamp = latestSmoked?.timestampMillis,
                 paceMonthlyCigs = paceMonthCigs,
                 paceYearlyCigs = paceYearCigs,
-                paceYearlyUnits = paceYearUnits
+                paceYearlyUnits = paceYearUnits,
+                consecutiveSmokingDays = streak,
+                smokedToday = hasSmokedToday
             )
         }
     }
@@ -134,6 +174,7 @@ class CigaretteRepository(
         val startOfToday = DateRangeUtils.getStartOfTodayMillis()
         val startOfWeek = DateRangeUtils.getWeekStartMillis()
         val startOfMonth = DateRangeUtils.getMonthStartMillis()
+        val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24L * 3600L * 1000L)
 
         val todaySmoked = dao.countSmokedFrom(startOfToday)
         val todaySkipped = dao.countSkippedFrom(startOfToday)
@@ -141,6 +182,7 @@ class CigaretteRepository(
         val monthSmoked = dao.countSmokedFrom(startOfMonth)
         val latestSmoked = dao.getLatestSmoked()
         val settings = preferencesRepository.getSettings()
+        val recentLogs = dao.getLogsFrom(ninetyDaysAgo)
 
         val price = settings.pricePerCigarette
         val todaySpent = CalculationUtils.calculateSpent(todaySmoked, price)
@@ -152,6 +194,30 @@ class CigaretteRepository(
         val paceMonthCigs = dailyAvg * 30.0
         val paceYearCigs = dailyAvg * 365.0
         val paceYearUnits = paceYearCigs * price
+
+        val zone = java.time.ZoneId.systemDefault()
+        val smokedDates = recentLogs
+            .filter { !it.isSkipped }
+            .map { java.time.Instant.ofEpochMilli(it.timestampMillis).atZone(zone).toLocalDate() }
+            .toSet()
+
+        val today = java.time.LocalDate.now(zone)
+        val hasSmokedToday = todaySmoked > 0 || smokedDates.contains(today)
+        var streak = 0
+        if (hasSmokedToday) {
+            streak = 1
+            var checkDate = today.minusDays(1)
+            while (smokedDates.contains(checkDate)) {
+                streak++
+                checkDate = checkDate.minusDays(1)
+            }
+        } else {
+            var checkDate = today.minusDays(1)
+            while (smokedDates.contains(checkDate)) {
+                streak++
+                checkDate = checkDate.minusDays(1)
+            }
+        }
 
         return HabitSummary(
             todayCount = todaySmoked,
@@ -167,8 +233,45 @@ class CigaretteRepository(
             lastSmokedTimestamp = latestSmoked?.timestampMillis,
             paceMonthlyCigs = paceMonthCigs,
             paceYearlyCigs = paceYearCigs,
-            paceYearlyUnits = paceYearUnits
+            paceYearlyUnits = paceYearUnits,
+            consecutiveSmokingDays = streak,
+            smokedToday = hasSmokedToday
         )
+    }
+
+    fun getHourlyTriggerFlow(daysCount: Int = 30): Flow<HourlyTriggerData> {
+        val earliestMillis = System.currentTimeMillis() - (daysCount.toLong() * 24L * 3600L * 1000L)
+        val zone = java.time.ZoneId.systemDefault()
+
+        return dao.getLogsFromFlow(earliestMillis).map { logs ->
+            val smokedLogs = logs.filter { !it.isSkipped }
+            val counts = IntArray(24) { 0 }
+
+            for (log in smokedLogs) {
+                val hour = java.time.Instant.ofEpochMilli(log.timestampMillis)
+                    .atZone(zone)
+                    .hour
+                if (hour in 0..23) {
+                    counts[hour]++
+                }
+            }
+
+            var peakH: Int? = null
+            var peakC = 0
+            for (h in 0 until 24) {
+                if (counts[h] > peakC) {
+                    peakC = counts[h]
+                    peakH = h
+                }
+            }
+
+            HourlyTriggerData(
+                hourCounts = counts.toList(),
+                peakHour = if (peakC > 0) peakH else null,
+                peakCount = peakC,
+                totalSmoked = smokedLogs.size
+            )
+        }
     }
 
     fun getDailyStatsFlow(daysCount: Int): Flow<List<DayStat>> {
@@ -212,6 +315,7 @@ class CigaretteRepository(
         root.put("pricePerCigarette", settings.pricePerCigarette)
         root.put("wishlistName", settings.wishlistName)
         root.put("wishlistCost", settings.wishlistCost)
+        root.put("isDarkMode", settings.isDarkMode)
 
         val array = JSONArray()
         allLogs.forEach { log ->
@@ -246,6 +350,9 @@ class CigaretteRepository(
             }
             if (root.has("wishlistName") && root.has("wishlistCost")) {
                 preferencesRepository.setWishlist(root.getString("wishlistName"), root.getDouble("wishlistCost"))
+            }
+            if (root.has("isDarkMode")) {
+                preferencesRepository.setDarkMode(root.getBoolean("isDarkMode"))
             }
 
             dao.insertAll(restoredLogs)

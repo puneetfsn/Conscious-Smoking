@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +44,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val haptic = LocalHapticFeedback.current
     var isPressedSmoked by remember { mutableStateOf(false) }
     var isPressedSkipped by remember { mutableStateOf(false) }
     var completedTasks by remember { mutableStateOf(setOf<String>()) }
@@ -99,7 +102,79 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // CURRENT SMOKING STREAK (REVERSE PSYCHOLOGY)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (summary.consecutiveSmokingDays > 0)
+                                AccentCoral.copy(alpha = 0.15f)
+                            else
+                                SuccessGreen.copy(alpha = 0.15f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (summary.consecutiveSmokingDays > 0) Icons.Default.Whatshot else Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = if (summary.consecutiveSmokingDays > 0) AccentCoral else SuccessGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "SMOKING STREAK",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted
+                        )
+                        Text(
+                            text = if (summary.consecutiveSmokingDays > 0)
+                                "${summary.consecutiveSmokingDays} ${if (summary.consecutiveSmokingDays == 1) "day" else "days"} in a row"
+                            else
+                                "Chain broken!",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (summary.consecutiveSmokingDays > 0) AccentCoral else SuccessGreen
+                        )
+                    }
+                    Text(
+                        text = when {
+                            summary.consecutiveSmokingDays > 0 && summary.smokedToday ->
+                                "Chain active today (${summary.todayCount} smoked). Will you break the chain tomorrow?"
+                            summary.consecutiveSmokingDays > 0 && !summary.smokedToday ->
+                                "${summary.consecutiveSmokingDays}-day streak up to yesterday. Don't smoke today to reset to 0!"
+                            else ->
+                                "0 consecutive days smoked. You are keeping the chain broken!"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         // TODAY'S HERO DISPLAY
         Row(
@@ -146,6 +221,7 @@ fun HomeScreen(
                                 isPressedSmoked = true
                                 tryAwaitRelease()
                                 isPressedSmoked = false
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onLogClick()
                             })
                         },
@@ -172,6 +248,7 @@ fun HomeScreen(
                                 isPressedSkipped = true
                                 tryAwaitRelease()
                                 isPressedSkipped = false
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onLogSkippedClick()
                             })
                         },

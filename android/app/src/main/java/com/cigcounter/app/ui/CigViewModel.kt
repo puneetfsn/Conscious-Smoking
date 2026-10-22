@@ -10,6 +10,7 @@ import com.cigcounter.app.data.CigaretteLog
 import com.cigcounter.app.data.CigaretteRepository
 import com.cigcounter.app.data.DayStat
 import com.cigcounter.app.data.HabitSummary
+import com.cigcounter.app.data.HourlyTriggerData
 import com.cigcounter.app.data.UserSettings
 import com.cigcounter.app.util.CalculationUtils
 import com.cigcounter.app.util.DamageReportGenerator
@@ -58,6 +59,14 @@ class CigViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
+        )
+
+    val hourlyTriggerData: StateFlow<HourlyTriggerData> = _selectedHistoryDays
+        .flatMapLatest { days -> repository.getHourlyTriggerFlow(days) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = HourlyTriggerData()
         )
 
     val recentLogs: StateFlow<List<CigaretteLog>> = repository.getRecentLogsFlow(limit = 40)
@@ -286,14 +295,23 @@ class CigViewModel(
         }
     }
 
+    fun setDarkMode(isDark: Boolean) {
+        viewModelScope.launch {
+            val app = getApplication<CigApp>()
+            app.preferencesRepository.setDarkMode(isDark)
+            _snackbarEvent.emit(if (isDark) "Switched to Dark Mode" else "Switched to Light Mode")
+        }
+    }
+
     fun generateDamageReportPdf(): File {
-        val logs = habitSummary.value
+        val summary = habitSummary.value
         val app = getApplication<CigApp>()
         // Generate on-device PDF
         return DamageReportGenerator.generatePdfReport(
             context = app,
-            logs = emptyList(), // or full query
-            pricePerUnit = logs.pricePerUnit
+            logs = recentLogs.value,
+            pricePerUnit = summary.pricePerUnit,
+            liveSecondsSinceLast = liveSecondsSinceLast.value
         )
     }
 

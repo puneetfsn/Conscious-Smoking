@@ -20,8 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +44,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cigcounter.app.data.CigaretteLog
 import com.cigcounter.app.data.DayStat
+import com.cigcounter.app.data.HourlyTriggerData
 import com.cigcounter.app.ui.theme.AccentCoral
 import com.cigcounter.app.ui.theme.DarkOutline
 import com.cigcounter.app.ui.theme.DarkSurface
 import com.cigcounter.app.ui.theme.DarkSurfaceVariant
+import com.cigcounter.app.ui.theme.LocalIsDarkTheme
 import com.cigcounter.app.ui.theme.TextMuted
 import com.cigcounter.app.ui.theme.TextPrimary
 import com.cigcounter.app.ui.theme.TextSecondary
@@ -59,6 +65,7 @@ fun HistoryScreen(
     selectedDays: Int,
     onDaysSelected: (Int) -> Unit,
     recentLogs: List<CigaretteLog>,
+    hourlyTriggerData: HourlyTriggerData = HourlyTriggerData(),
     modifier: Modifier = Modifier
 ) {
     val totalCount = dailyStats.sumOf { it.count }
@@ -178,6 +185,14 @@ fun HistoryScreen(
             }
         }
 
+        // 24-Hour Trigger Hour / Heatmap
+        item {
+            TriggerHourHeatmapCard(
+                triggerData = hourlyTriggerData,
+                selectedDays = selectedDays
+            )
+        }
+
         // Recent Logs Section
         item {
             Spacer(modifier = Modifier.height(8.dp))
@@ -233,8 +248,9 @@ private fun ComposeBarChart(
     val baselineColor = DarkOutline
     val barColor = AccentCoral
     val barInactiveColor = DarkSurfaceVariant
-    val textPaintColor = android.graphics.Color.parseColor("#A1A1AA")
-    val countPaintColor = android.graphics.Color.parseColor("#EDEDED")
+    val isDark = LocalIsDarkTheme.current
+    val textPaintColor = if (isDark) android.graphics.Color.parseColor("#A1A1AA") else android.graphics.Color.parseColor("#64748B")
+    val countPaintColor = if (isDark) android.graphics.Color.parseColor("#EDEDED") else android.graphics.Color.parseColor("#0F172A")
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -421,6 +437,209 @@ private fun LogItemRow(log: CigaretteLog) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
+        }
+    }
+}
+
+@Composable
+private fun TriggerHourHeatmapCard(
+    triggerData: HourlyTriggerData,
+    selectedDays: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = AccentCoral,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "24-Hour Trigger Heatmap",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                }
+                Text(
+                    text = "Last $selectedDays days",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Identifies exactly when cravings strike for actionable self-knowledge.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Peak Trigger Callout
+            if (triggerData.peakHour != null && triggerData.peakCount > 0) {
+                val peakH = triggerData.peakHour
+                val nextH = (peakH + 1) % 24
+                val timeLabel = String.format("%02d:00 - %02d:00", peakH, nextH)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(DarkSurfaceVariant)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Whatshot,
+                        contentDescription = null,
+                        tint = AccentCoral,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Peak Trigger Window: ",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextMuted
+                            )
+                            Text(
+                                text = timeLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentCoral
+                            )
+                        }
+                        Text(
+                            text = "${triggerData.peakCount} cigarettes logged here. Plan a healthy distraction before this hour.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(DarkSurfaceVariant)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "No cravings or logs recorded in the selected period.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 24-Hour Grid: 4 rows of 6 hours
+            val timeBlocks = listOf(
+                "Night (00:00 - 05:00)" to (0..5),
+                "Morning (06:00 - 11:00)" to (6..11),
+                "Afternoon (12:00 - 17:00)" to (12..17),
+                "Evening (18:00 - 23:00)" to (18..23)
+            )
+
+            val maxVal = maxOf(triggerData.peakCount, 1)
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                timeBlocks.forEach { (blockTitle, hourRange) ->
+                    Column {
+                        Text(
+                            text = blockTitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted,
+                            modifier = Modifier.padding(bottom = 3.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            hourRange.forEach { hour ->
+                                val count = triggerData.hourCounts.getOrElse(hour) { 0 }
+                                val intensity = if (count > 0) (count.toFloat() / maxVal).coerceIn(0f, 1f) else 0f
+
+                                val cellBg = if (count == 0) {
+                                    DarkSurfaceVariant
+                                } else {
+                                    AccentCoral.copy(alpha = 0.25f + 0.75f * intensity)
+                                }
+
+                                val isPeak = triggerData.peakHour == hour && count > 0
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(38.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(cellBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = String.format("%02d", hour),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            color = if (count > 0 && intensity > 0.5f) Color.White else TextMuted
+                                        )
+                                        Text(
+                                            text = if (count > 0) "$count" else "·",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isPeak) FontWeight.ExtraBold else FontWeight.Normal,
+                                            color = if (count > 0) (if (intensity > 0.5f) Color.White else AccentCoral) else TextMuted
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Heatmap Legend
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Low", style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = TextMuted)
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(DarkSurfaceVariant))
+                Spacer(modifier = Modifier.width(2.dp))
+                Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(AccentCoral.copy(alpha = 0.35f)))
+                Spacer(modifier = Modifier.width(2.dp))
+                Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(AccentCoral.copy(alpha = 0.70f)))
+                Spacer(modifier = Modifier.width(2.dp))
+                Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(AccentCoral))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "High", style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = TextMuted)
+            }
         }
     }
 }

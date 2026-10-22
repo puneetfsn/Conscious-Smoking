@@ -12,6 +12,9 @@
     <!-- Biometric / PIN Privacy Lock -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- Haptic vibration feedback -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".CigApp"
         android:allowBackup="false"

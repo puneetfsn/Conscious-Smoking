@@ -27,6 +27,7 @@ fun MainScreen(viewModel: CigViewModel) {
     val habitSummary by viewModel.habitSummary.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val dailyStats by viewModel.dailyStats.collectAsState()
+    val hourlyTriggerData by viewModel.hourlyTriggerData.collectAsState()
     val selectedDays by viewModel.selectedHistoryDays.collectAsState()
     val recentLogs by viewModel.recentLogs.collectAsState()
     val priceInput by viewModel.priceInput.collectAsState()
@@ -130,6 +131,7 @@ fun MainScreen(viewModel: CigViewModel) {
                 selectedDays = selectedDays,
                 onDaysSelected = { viewModel.selectHistoryDays(it) },
                 recentLogs = recentLogs,
+                hourlyTriggerData = hourlyTriggerData,
                 modifier = Modifier.padding(innerPadding)
             )
             2 -> SettingsScreen(
@@ -144,10 +146,13 @@ fun MainScreen(viewModel: CigViewModel) {
                 onSaveWishlist = { viewModel.saveWishlist() },
                 onClearWishlist = { viewModel.clearWishlist() },
                 onWidgetThemeChange = { viewModel.setWidgetTheme(it) },
+                onDarkModeChange = { viewModel.setDarkMode(it) },
                 onSetPinCode = { viewModel.setPinCode(it) },
                 onExportBackup = { viewModel.exportBackupJson { /* copy */ } },
                 onImportBackup = { viewModel.importBackupJson(it) },
                 onDeleteAllData = { viewModel.deleteAllData() },
+                liveSecondsSinceLast = liveSeconds,
+                recentLogs = recentLogs,
                 modifier = Modifier.padding(innerPadding)
             )
         }

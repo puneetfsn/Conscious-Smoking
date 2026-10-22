@@ -25,7 +25,8 @@ data class UserSettings(
     val widgetTheme: String = "NOTHING_DARK", // "NOTHING_DARK" or "NOTHING_WHITE"
     val pinCode: String = "",
     val eveningNotificationEnabled: Boolean = true,
-    val lastMilestoneShown: Int = 0
+    val lastMilestoneShown: Int = 0,
+    val isDarkMode: Boolean = true
 )
 
 class UserPreferencesRepository(private val context: Context) {
@@ -37,6 +38,7 @@ class UserPreferencesRepository(private val context: Context) {
     private val pinCodeKey = stringPreferencesKey("pin_code")
     private val eveningNotificationKey = booleanPreferencesKey("evening_notification_enabled")
     private val lastMilestoneShownKey = intPreferencesKey("last_milestone_shown")
+    private val darkModeKey = booleanPreferencesKey("is_dark_mode")
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data
         .catch { exception ->
@@ -54,7 +56,8 @@ class UserPreferencesRepository(private val context: Context) {
                 widgetTheme = preferences[widgetThemeKey] ?: "NOTHING_DARK",
                 pinCode = preferences[pinCodeKey] ?: "",
                 eveningNotificationEnabled = preferences[eveningNotificationKey] ?: true,
-                lastMilestoneShown = preferences[lastMilestoneShownKey] ?: 0
+                lastMilestoneShown = preferences[lastMilestoneShownKey] ?: 0,
+                isDarkMode = preferences[darkModeKey] ?: true
             )
         }
 
@@ -96,5 +99,9 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setEveningNotificationEnabled(enabled: Boolean) {
         context.dataStore.edit { it[eveningNotificationKey] = enabled }
+    }
+
+    suspend fun setDarkMode(isDark: Boolean) {
+        context.dataStore.edit { it[darkModeKey] = isDark }
     }
 }

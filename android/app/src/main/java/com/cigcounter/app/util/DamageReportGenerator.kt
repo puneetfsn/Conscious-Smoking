@@ -23,6 +23,7 @@ object DamageReportGenerator {
         context: Context,
         logs: List<CigaretteLog>,
         pricePerUnit: Double,
+        liveSecondsSinceLast: Long? = null,
         zoneId: ZoneId = ZoneId.systemDefault()
     ): File {
         val pdfDocument = PdfDocument()
@@ -45,14 +46,14 @@ object DamageReportGenerator {
 
         val sectionPaint = Paint().apply {
             color = Color.rgb(220, 50, 20)
-            textSize = 13f
+            textSize = 12f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
 
         val bodyPaint = Paint().apply {
             color = Color.BLACK
-            textSize = 10f
+            textSize = 9.5f
             isAntiAlias = true
         }
 
@@ -62,14 +63,14 @@ object DamageReportGenerator {
             strokeWidth = 1f
         }
 
-        var y = 50f
+        var y = 45f
 
         // Header
         canvas.drawText("SmokeLedger — Clinical Damage Report", 40f, y, titlePaint)
-        y += 18f
+        y += 16f
         val nowStr = LocalDate.now(zoneId).format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
         canvas.drawText("Generated on: $nowStr  •  Confidential Medical / Therapy Profile", 40f, y, subPaint)
-        y += 28f
+        y += 24f
 
         // Calculations for last 30 days
         val thirtyDaysAgo = DateRangeUtils.getMonthStartMillis(zoneId)
@@ -84,31 +85,73 @@ object DamageReportGenerator {
         val yearlyProjectedUnits = yearlyProjectedCigs * pricePerUnit
 
         // Metric Box
-        canvas.drawRect(40f, y, 555f, y + 105f, boxPaint)
-        canvas.drawText("30-DAY BEHAVIOUR SUMMARY", 55f, y + 22f, sectionPaint)
+        canvas.drawRect(40f, y, 555f, y + 96f, boxPaint)
+        canvas.drawText("30-DAY BEHAVIOUR SUMMARY", 55f, y + 20f, sectionPaint)
 
-        canvas.drawText("Total Smoked (30 Days):", 55f, y + 42f, bodyPaint)
-        canvas.drawText("$totalSmoked cigarettes (${String.format("%.1f", dailyAvg)}/day avg)", 250f, y + 42f, titlePaint.apply { textSize = 11f })
+        canvas.drawText("Total Smoked (30 Days):", 55f, y + 38f, bodyPaint)
+        canvas.drawText("$totalSmoked cigarettes (${String.format("%.1f", dailyAvg)}/day avg)", 250f, y + 38f, titlePaint.apply { textSize = 10.5f })
 
-        canvas.drawText("Total Units Spent (30 Days):", 55f, y + 60f, bodyPaint)
-        canvas.drawText("${CalculationUtils.formatUnits(totalSpent)} units", 250f, y + 60f, bodyPaint)
+        canvas.drawText("Total Units Spent (30 Days):", 55f, y + 55f, bodyPaint)
+        canvas.drawText("${CalculationUtils.formatUnits(totalSpent)} units", 250f, y + 55f, bodyPaint)
 
-        canvas.drawText("Craving Resistances Logged:", 55f, y + 78f, bodyPaint)
-        canvas.drawText("$totalSkipped cigarettes resisted (Ghost Counter)", 250f, y + 78f, bodyPaint)
+        canvas.drawText("Craving Resistances Logged:", 55f, y + 72f, bodyPaint)
+        canvas.drawText("$totalSkipped cigarettes resisted (Ghost Counter)", 250f, y + 72f, bodyPaint)
 
-        canvas.drawText("Estimated Tar / Nicotine Intake:", 55f, y + 96f, bodyPaint)
-        canvas.drawText("Approx. ${totalSmoked * 11} mg tar · ${totalSmoked} mg nicotine", 250f, y + 96f, bodyPaint)
+        canvas.drawText("Estimated Tar / Nicotine Intake:", 55f, y + 89f, bodyPaint)
+        canvas.drawText("Approx. ${totalSmoked * 11} mg tar · ${totalSmoked} mg nicotine", 250f, y + 89f, bodyPaint)
 
-        y += 130f
+        y += 112f
+
+        // Health Benefits & Physiological Recovery (Since Last Cigarette)
+        canvas.drawText("PHYSIOLOGICAL RECOVERY & HEALTH BENEFITS (SINCE LAST SMOKE)", 40f, y, sectionPaint)
+        y += 14f
+        val elapsedSec = liveSecondsSinceLast ?: run {
+            val lastSmoked = logs.filter { !it.isSkipped }.maxByOrNull { it.timestampMillis }
+            if (lastSmoked != null) (System.currentTimeMillis() - lastSmoked.timestampMillis) / 1000L else null
+        }
+        val durationLabel = if (elapsedSec == null) "No smoke event recorded yet" else {
+            val h = elapsedSec / 3600
+            val m = (elapsedSec % 3600) / 60
+            "${h}h ${m}m smoke-free"
+        }
+        canvas.drawText("Current Smoke-Free Duration: $durationLabel", 40f, y, subPaint)
+        y += 16f
+
+        val benefits = listOf(
+            Triple("Heart Rate & Blood Pressure (20m)", 20 * 60L, "Pulse stabilizes & returns to resting baseline"),
+            Triple("Carbon Monoxide Normalization (8h)", 8 * 3600L, "CO drops by 50%; blood oxygen normalizes"),
+            Triple("Cardiac Risk & Mucus Clearance (24h)", 24 * 3600L, "Heart attack risk falls; lungs purge debris"),
+            Triple("Nicotine Cleared & Nerve Regrowth (48h)", 48 * 3600L, "Nicotine eliminated; taste/smell senses sharpen"),
+            Triple("Bronchial Tube Relaxation (72h)", 72 * 3600L, "Airway relaxes; functional lung capacity expands")
+        )
+
+        benefits.forEach { (name, targetSec, desc) ->
+            val prog = if (elapsedSec == null) 0f else (elapsedSec.toFloat() / targetSec.toFloat()).coerceIn(0f, 1f)
+            val isRestored = prog >= 1f
+            val percent = (prog * 100).toInt()
+            val status = if (isRestored) "[RESTORED 100%]" else "[IN PROGRESS $percent%]"
+
+            val statPaint = Paint(bodyPaint).apply {
+                color = if (isRestored) Color.rgb(22, 101, 52) else Color.rgb(3, 105, 161)
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textSize = 9f
+            }
+            canvas.drawText(status, 45f, y, statPaint)
+            canvas.drawText(name, 165f, y, titlePaint.apply { textSize = 9.5f })
+            canvas.drawText(desc, 345f, y, subPaint.apply { textSize = 8.5f })
+            y += 14f
+        }
+
+        y += 18f
 
         // "The Mirror" — 1-Year Pace Projection
         canvas.drawText("THE MIRROR — 1-YEAR PACE PROJECTION", 40f, y, sectionPaint)
-        y += 16f
+        y += 14f
         canvas.drawText(
             "If current 30-day habits continue without change over the next 12 months:",
             40f, y, subPaint
         )
-        y += 18f
+        y += 15f
         canvas.drawText(
             "• Projected annual consumption: ${String.format("%.0f", yearlyProjectedCigs)} cigarettes",
             45f, y, bodyPaint
