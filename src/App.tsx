@@ -152,7 +152,9 @@ export default function App() {
   const monthSpent = monthSmoked * pricePerUnit;
 
   // Feature 4: Live Timer (Duration since latest smoked cigarette)
-  const latestSmoked = smokedLogs.length > 0 ? smokedLogs[smokedLogs.length - 1] : null;
+  const latestSmoked = smokedLogs.length > 0
+    ? smokedLogs.reduce((latest, curr) => (curr.timestamp > latest.timestamp ? curr : latest))
+    : null;
   const elapsedSecondsSinceSmoked = latestSmoked ? Math.max(0, Math.floor((nowMillis - latestSmoked.timestamp) / 1000)) : null;
 
   const formatTimer = (totalSec: number | null) => {

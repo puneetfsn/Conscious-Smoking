@@ -33,6 +33,9 @@ import com.cigcounter.app.data.UserSettings
 import com.cigcounter.app.ui.theme.*
 import com.cigcounter.app.util.DamageReportGenerator
 import com.cigcounter.app.util.HabitTasks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SettingsScreen(
@@ -147,38 +150,52 @@ fun SettingsScreen(
                     color = TextSecondary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
+                val coroutineScope = rememberCoroutineScope()
+                var isGeneratingPdf by remember { mutableStateOf(false) }
+
                 Button(
                     onClick = {
-                        try {
-                            val pdfFile = DamageReportGenerator.generatePdfReport(
-                                context = context,
-                                logs = recentLogs,
-                                pricePerUnit = settings.pricePerCigarette,
-                                liveSecondsSinceLast = liveSecondsSinceLast
-                            )
-                            val authority = "${context.packageName}.fileprovider"
-                            val uri: Uri = FileProvider.getUriForFile(context, authority, pdfFile)
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/pdf"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                putExtra(Intent.EXTRA_SUBJECT, "SmokeLedger Clinical Damage Report")
-                                clipData = ClipData.newRawUri("Damage Report", uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        if (isGeneratingPdf) return@Button
+                        isGeneratingPdf = true
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                val pdfFile = DamageReportGenerator.generatePdfReport(
+                                    context = context,
+                                    logs = recentLogs,
+                                    pricePerUnit = settings.pricePerCigarette,
+                                    liveSecondsSinceLast = liveSecondsSinceLast
+                                )
+                                val authority = "${context.packageName}.fileprovider"
+                                val uri: Uri = FileProvider.getUriForFile(context, authority, pdfFile)
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/pdf"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_SUBJECT, "SmokeLedger Clinical Damage Report")
+                                    clipData = ClipData.newRawUri("Damage Report", uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                val chooser = Intent.createChooser(shareIntent, "Share Damage Report").apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    context.startActivity(chooser)
+                                    isGeneratingPdf = false
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    isGeneratingPdf = false
+                                    Toast.makeText(context, "Could not share report: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
+                                }
                             }
-                            val chooser = Intent.createChooser(shareIntent, "Share Damage Report").apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(chooser)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Could not share report: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
                         }
                     },
+                    enabled = !isGeneratingPdf,
                     colors = ButtonDefaults.buttonColors(containerColor = AccentCoral),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Generate & Share PDF")
+                    Text(if (isGeneratingPdf) "Generating PDF..." else "Generate & Share PDF")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

@@ -20,6 +20,7 @@ import com.cigcounter.app.util.HabitTasks
 import com.cigcounter.app.util.PriceValidationResult
 import com.cigcounter.app.widget.CigWidgetReceiver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -107,7 +108,7 @@ class CigViewModel(
     init {
         // Ticker loop for live smoke-free timer
         viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 val lastTimestamp = habitSummary.value.lastSmokedTimestamp
                 if (lastTimestamp != null) {
                     val diffSec = (System.currentTimeMillis() - lastTimestamp) / 1000L
@@ -120,6 +121,7 @@ class CigViewModel(
         }
 
         viewModelScope.launch {
+            var isInitialBoot = true
             repository.settingsFlow.collect { currentSettings ->
                 if (_priceInput.value.isEmpty()) {
                     _priceInput.value = CalculationUtils.formatUnits(currentSettings.pricePerCigarette)
@@ -130,9 +132,11 @@ class CigViewModel(
                 if (_wishlistCostInput.value.isEmpty() && currentSettings.wishlistCost > 0.0) {
                     _wishlistCostInput.value = CalculationUtils.formatUnits(currentSettings.wishlistCost)
                 }
-                if (currentSettings.pinCode.isNotEmpty()) {
+                // Only lock on cold boot if PIN is set; never re-lock an already authenticated session
+                if (isInitialBoot && currentSettings.pinCode.isNotEmpty()) {
                     _isUnlocked.value = false
                 }
+                isInitialBoot = false
             }
         }
 
@@ -303,6 +307,15 @@ class CigViewModel(
         }
     }
 
+    fun setCurrency(code: String, symbol: String) {
+        viewModelScope.launch {
+            val app = getApplication<CigApp>()
+            app.preferencesRepository.setCurrency(code, symbol)
+            _snackbarEvent.emit("Currency updated to $code ($symbol)")
+            CigWidgetReceiver.updateAll(getApplication())
+        }
+    }
+
     fun generateDamageReportPdf(): File {
         val summary = habitSummary.value
         val app = getApplication<CigApp>()
@@ -311,6 +324,7 @@ class CigViewModel(
             context = app,
             logs = recentLogs.value,
             pricePerUnit = summary.pricePerUnit,
+            currencySymbol = settings.value.currencySymbol,
             liveSecondsSinceLast = liveSecondsSinceLast.value
         )
     }

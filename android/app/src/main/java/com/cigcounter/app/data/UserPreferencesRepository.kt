@@ -20,6 +20,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 data class UserSettings(
     val pricePerCigarette: Double = 10.0,
+    val currencyCode: String = "INR",
+    val currencySymbol: String = "₹",
     val wishlistName: String = "",
     val wishlistCost: Double = 0.0,
     val widgetTheme: String = "NOTHING_DARK", // "NOTHING_DARK" or "NOTHING_WHITE"
@@ -32,6 +34,8 @@ data class UserSettings(
 class UserPreferencesRepository(private val context: Context) {
 
     private val priceKey = doublePreferencesKey("price_per_cigarette_units")
+    private val currencyCodeKey = stringPreferencesKey("currency_code")
+    private val currencySymbolKey = stringPreferencesKey("currency_symbol")
     private val wishlistNameKey = stringPreferencesKey("wishlist_name")
     private val wishlistCostKey = doublePreferencesKey("wishlist_cost")
     private val widgetThemeKey = stringPreferencesKey("widget_theme")
@@ -49,8 +53,12 @@ class UserPreferencesRepository(private val context: Context) {
             }
         }
         .map { preferences ->
+            val code = preferences[currencyCodeKey] ?: "INR"
+            val fallbackSymbol = Currencies.get(code).symbol
             UserSettings(
                 pricePerCigarette = preferences[priceKey] ?: 10.0,
+                currencyCode = code,
+                currencySymbol = preferences[currencySymbolKey] ?: fallbackSymbol,
                 wishlistName = preferences[wishlistNameKey] ?: "",
                 wishlistCost = preferences[wishlistCostKey] ?: 0.0,
                 widgetTheme = preferences[widgetThemeKey] ?: "NOTHING_DARK",
@@ -103,5 +111,12 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setDarkMode(isDark: Boolean) {
         context.dataStore.edit { it[darkModeKey] = isDark }
+    }
+
+    suspend fun setCurrency(code: String, symbol: String) {
+        context.dataStore.edit {
+            it[currencyCodeKey] = code
+            it[currencySymbolKey] = symbol
+        }
     }
 }

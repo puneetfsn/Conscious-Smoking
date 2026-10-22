@@ -219,10 +219,12 @@ fun HomeScreen(
                         .pointerInput(Unit) {
                             detectTapGestures(onPress = {
                                 isPressedSmoked = true
-                                tryAwaitRelease()
+                                val released = tryAwaitRelease()
                                 isPressedSmoked = false
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onLogClick()
+                                if (released) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLogClick()
+                                }
                             })
                         },
                     contentAlignment = Alignment.Center
@@ -246,10 +248,12 @@ fun HomeScreen(
                         .pointerInput(Unit) {
                             detectTapGestures(onPress = {
                                 isPressedSkipped = true
-                                tryAwaitRelease()
+                                val released = tryAwaitRelease()
                                 isPressedSkipped = false
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onLogSkippedClick()
+                                if (released) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLogSkippedClick()
+                                }
                             })
                         },
                     contentAlignment = Alignment.Center

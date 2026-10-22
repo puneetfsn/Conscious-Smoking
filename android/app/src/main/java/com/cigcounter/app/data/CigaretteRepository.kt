@@ -159,7 +159,7 @@ class CigaretteRepository(
                 todaySkippedSavedUnits = todaySkippedSaved,
                 weekSpentUnits = weekSpent,
                 monthSpentUnits = monthSpent,
-                todaySavedUnits = todaySpent,
+                todaySavedUnits = todaySkippedSaved,
                 lastSmokedTimestamp = latestSmoked?.timestampMillis,
                 paceMonthlyCigs = paceMonthCigs,
                 paceYearlyCigs = paceYearCigs,
@@ -229,7 +229,7 @@ class CigaretteRepository(
             todaySkippedSavedUnits = todaySkippedSaved,
             weekSpentUnits = weekSpent,
             monthSpentUnits = monthSpent,
-            todaySavedUnits = todaySpent,
+            todaySavedUnits = todaySkippedSaved,
             lastSmokedTimestamp = latestSmoked?.timestampMillis,
             paceMonthlyCigs = paceMonthCigs,
             paceYearlyCigs = paceYearCigs,
@@ -313,6 +313,8 @@ class CigaretteRepository(
         root.put("version", 1)
         root.put("exportedAtMillis", System.currentTimeMillis())
         root.put("pricePerCigarette", settings.pricePerCigarette)
+        root.put("currencyCode", settings.currencyCode)
+        root.put("currencySymbol", settings.currencySymbol)
         root.put("wishlistName", settings.wishlistName)
         root.put("wishlistCost", settings.wishlistCost)
         root.put("isDarkMode", settings.isDarkMode)
@@ -347,6 +349,11 @@ class CigaretteRepository(
 
             if (root.has("pricePerCigarette")) {
                 preferencesRepository.setPricePerCigarette(root.getDouble("pricePerCigarette"))
+            }
+            if (root.has("currencyCode")) {
+                val code = root.getString("currencyCode")
+                val symbol = root.optString("currencySymbol", Currencies.get(code).symbol)
+                preferencesRepository.setCurrency(code, symbol)
             }
             if (root.has("wishlistName") && root.has("wishlistCost")) {
                 preferencesRepository.setWishlist(root.getString("wishlistName"), root.getDouble("wishlistCost"))

@@ -206,15 +206,27 @@ object DamageReportGenerator {
 
         pdfDocument.finishPage(page)
 
-        // Save PDF to cache or documents
+        // Save PDF to cache directory
         val reportsDir = File(context.cacheDir, "reports")
-        if (!reportsDir.exists()) reportsDir.mkdirs()
-        val outputFile = File(reportsDir, "SmokeLedger_Damage_Report_${System.currentTimeMillis()}.pdf")
-        FileOutputStream(outputFile).use { out ->
-            pdfDocument.writeTo(out)
+        if (!reportsDir.exists()) {
+            reportsDir.mkdirs()
+        } else {
+            // Purge previous reports to prevent cache bloat
+            reportsDir.listFiles()?.forEach { file ->
+                if (file.name.startsWith("SmokeLedger_Damage_Report")) {
+                    file.delete()
+                }
+            }
         }
-        pdfDocument.close()
+        val outputFile = File(reportsDir, "SmokeLedger_Damage_Report.pdf")
 
-        return outputFile
+        try {
+            FileOutputStream(outputFile).use { out ->
+                pdfDocument.writeTo(out)
+            }
+            return outputFile
+        } finally {
+            pdfDocument.close()
+        }
     }
 }
