@@ -116,7 +116,7 @@ object HabitTasks {
 
     fun getRandomTask(): HabitTask = allTasks.random()
 
-    fun getAllTasks(): List<HabitTask> = allTasks
+    
 
     fun getSuggestedTasks(todayCount: Int): List<HabitTask> {
         return when {
