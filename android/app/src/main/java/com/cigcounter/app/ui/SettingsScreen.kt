@@ -156,15 +156,21 @@ fun SettingsScreen(
                                 pricePerUnit = settings.pricePerCigarette,
                                 liveSecondsSinceLast = liveSecondsSinceLast
                             )
-                            val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
+                            val authority = "${context.packageName}.fileprovider"
+                            val uri: Uri = FileProvider.getUriForFile(context, authority, pdfFile)
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "application/pdf"
                                 putExtra(Intent.EXTRA_STREAM, uri)
+                                putExtra(Intent.EXTRA_SUBJECT, "SmokeLedger Clinical Damage Report")
+                                clipData = ClipData.newRawUri("Damage Report", uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Damage Report"))
+                            val chooser = Intent.createChooser(shareIntent, "Share Damage Report").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(chooser)
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Generated report in cache", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Could not share report: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentCoral),
