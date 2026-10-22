@@ -48,9 +48,22 @@ class CigWidget : GlanceAppWidget() {
         // Nothing OS Theme Palettes
         val backgroundColor = if (isWhiteTheme) ColorProvider(Color(0xFFF4F4F5)) else ColorProvider(Color(0xFF0F0F11))
         val surfaceColor = if (isWhiteTheme) ColorProvider(Color(0xFFE4E4E7)) else ColorProvider(Color(0xFF1E1E22))
-        val primaryAccent = ColorProvider(Color(0xFFFF3B30)) // Nothing Red / Accent Coral
+        val primaryAccent = ColorProvider(Color(0xFFFF3B30)) 
         val textPrimary = if (isWhiteTheme) ColorProvider(Color(0xFF09090B)) else ColorProvider(Color(0xFFEDEDED))
         val textSecondary = if (isWhiteTheme) ColorProvider(Color(0xFF52525B)) else ColorProvider(Color(0xFFA1A1AA))
+        val blueAccent = ColorProvider(Color(0xFF4FC3F7)) // For Ghost Counter
+
+        // Dynamic Calculations for Widget
+        val tarMg = summary.todayCount * 10 // Approx 10mg tar per cigarette
+        
+        val timeSince = if (summary.lastSmokedTimestamp != null && summary.lastSmokedTimestamp > 0) {
+            val diff = System.currentTimeMillis() - summary.lastSmokedTimestamp
+            val hours = diff / (1000 * 60 * 60)
+            val minutes = (diff / (1000 * 60)) % 60
+            "${hours}h ${minutes}m"
+        } else {
+            "--"
+        }
 
         Box(
             modifier = GlanceModifier
@@ -68,7 +81,6 @@ class CigWidget : GlanceAppWidget() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Main "+" Button: logs cigarette directly without opening app
                     Box(
                         modifier = GlanceModifier
                             .size(54.dp)
@@ -77,15 +89,11 @@ class CigWidget : GlanceAppWidget() {
                             .clickable(actionRunCallback<LogSmokedActionCallback>()),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "+",
-                            style = TextStyle(color = ColorProvider(Color.White), fontSize = 34.sp, fontWeight = FontWeight.Bold)
-                        )
+                        Text(text = "+", style = TextStyle(color = ColorProvider(Color.White), fontSize = 34.sp, fontWeight = FontWeight.Bold))
                     }
 
                     Spacer(modifier = GlanceModifier.height(8.dp))
 
-                    // Ghost Counter Button ("Resisted craving!")
                     Box(
                         modifier = GlanceModifier
                             .size(30.dp)
@@ -94,10 +102,7 @@ class CigWidget : GlanceAppWidget() {
                             .clickable(actionRunCallback<LogResistedActionCallback>()),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "🛡️",
-                            style = TextStyle(fontSize = 14.sp)
-                        )
+                        Text(text = "🛡️", style = TextStyle(fontSize = 14.sp))
                     }
                 }
 
@@ -112,43 +117,48 @@ class CigWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     
-                    // GIANT "Today" Header
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Header: Giant Count
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = GlanceModifier.fillMaxWidth()) {
                         Text(
                             text = "${summary.todayCount}",
                             style = TextStyle(color = textPrimary, fontSize = 46.sp, fontWeight = FontWeight.Bold)
                         )
                         Spacer(modifier = GlanceModifier.width(8.dp))
                         Column {
-                            Text(
-                                text = "CIGS",
-                                style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            )
-                            Text(
-                                text = "TODAY",
-                                style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            )
+                            Text("CIGS", style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                            Text("TODAY", style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                        }
+                    }
+
+                    Spacer(modifier = GlanceModifier.height(8.dp))
+
+                    // Row 1 of Data Pills (Saved & Resisted)
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = GlanceModifier.background(surfaceColor).cornerRadius(6.dp).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                            Text("Saved: ${CalculationUtils.formatUnits(summary.todaySavedUnits)} u", style = TextStyle(color = primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium))
+                        }
+                        Spacer(modifier = GlanceModifier.width(6.dp))
+                        Box(modifier = GlanceModifier.background(surfaceColor).cornerRadius(6.dp).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                            Text("🛡️ Resisted: ${summary.todaySkippedCount}", style = TextStyle(color = blueAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium))
                         }
                     }
 
                     Spacer(modifier = GlanceModifier.height(6.dp))
 
-                    // Highlight "Saved" Tag (Nothing OS style pill)
-                    Box(
-                        modifier = GlanceModifier
-                            .background(surfaceColor)
-                            .cornerRadius(6.dp)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Could save: ${CalculationUtils.formatUnits(summary.todaySavedUnits)} u",
-                            style = TextStyle(color = primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        )
+                    // Row 2 of Data Pills (Tar & Time)
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = GlanceModifier.background(surfaceColor).cornerRadius(6.dp).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                            Text("Tar: ~${tarMg}mg", style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium))
+                        }
+                        Spacer(modifier = GlanceModifier.width(6.dp))
+                        Box(modifier = GlanceModifier.background(surfaceColor).cornerRadius(6.dp).padding(horizontal = 6.dp, vertical = 3.dp)) {
+                            Text("⏳ $timeSince", style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium))
+                        }
                     }
 
                     Spacer(modifier = GlanceModifier.height(10.dp))
 
-                    // Footer spreading out the rest of the data
+                    // Footer
                     Text(
                         text = "Week: ${summary.weekCount}  ·  Month: ${summary.monthCount}",
                         style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
