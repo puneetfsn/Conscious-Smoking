@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -19,11 +20,12 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 data class UserSettings(
     val pricePerCigarette: Double = 10.0,
-    val wishlistName: String = "Headphones",
-    val wishlistCost: Double = 5000.0,
+    val wishlistName: String = "",
+    val wishlistCost: Double = 0.0,
     val widgetTheme: String = "NOTHING_DARK", // "NOTHING_DARK" or "NOTHING_WHITE"
     val pinCode: String = "",
-    val eveningNotificationEnabled: Boolean = true
+    val eveningNotificationEnabled: Boolean = true,
+    val lastMilestoneShown: Int = 0
 )
 
 class UserPreferencesRepository(private val context: Context) {
@@ -34,6 +36,7 @@ class UserPreferencesRepository(private val context: Context) {
     private val widgetThemeKey = stringPreferencesKey("widget_theme")
     private val pinCodeKey = stringPreferencesKey("pin_code")
     private val eveningNotificationKey = booleanPreferencesKey("evening_notification_enabled")
+    private val lastMilestoneShownKey = intPreferencesKey("last_milestone_shown")
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data
         .catch { exception ->
@@ -46,11 +49,12 @@ class UserPreferencesRepository(private val context: Context) {
         .map { preferences ->
             UserSettings(
                 pricePerCigarette = preferences[priceKey] ?: 10.0,
-                wishlistName = preferences[wishlistNameKey] ?: "Headphones",
-                wishlistCost = preferences[wishlistCostKey] ?: 5000.0,
+                wishlistName = preferences[wishlistNameKey] ?: "",
+                wishlistCost = preferences[wishlistCostKey] ?: 0.0,
                 widgetTheme = preferences[widgetThemeKey] ?: "NOTHING_DARK",
                 pinCode = preferences[pinCodeKey] ?: "",
-                eveningNotificationEnabled = preferences[eveningNotificationKey] ?: true
+                eveningNotificationEnabled = preferences[eveningNotificationKey] ?: true,
+                lastMilestoneShown = preferences[lastMilestoneShownKey] ?: 0
             )
         }
 
@@ -66,6 +70,19 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit {
             it[wishlistNameKey] = name
             it[wishlistCostKey] = cost
+        }
+    }
+
+    suspend fun clearWishlist() {
+        context.dataStore.edit {
+            it[wishlistNameKey] = ""
+            it[wishlistCostKey] = 0.0
+        }
+    }
+
+    suspend fun setLastMilestoneShown(milestone: Int) {
+        context.dataStore.edit {
+            it[lastMilestoneShownKey] = milestone
         }
     }
 

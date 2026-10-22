@@ -54,6 +54,13 @@ interface CigaretteDao {
     @Query("SELECT * FROM cigarette_logs ORDER BY timestampMillis DESC LIMIT :limit")
     fun getRecentLogs(limit: Int): Flow<List<CigaretteLog>>
 
+    // Total smoked count for milestone triggers
+    @Query("SELECT COUNT(*) FROM cigarette_logs WHERE isSkipped = 0")
+    fun countTotalSmokedFlow(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM cigarette_logs WHERE isSkipped = 0")
+    suspend fun countTotalSmoked(): Int
+
     // Full export for local JSON backup
     @Query("SELECT * FROM cigarette_logs ORDER BY timestampMillis ASC")
     suspend fun getAllLogs(): List<CigaretteLog>

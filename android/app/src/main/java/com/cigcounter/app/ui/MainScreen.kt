@@ -35,6 +35,7 @@ fun MainScreen(viewModel: CigViewModel) {
     val wishlistCost by viewModel.wishlistCostInput.collectAsState()
     val isUnlocked by viewModel.isUnlocked.collectAsState()
     val liveSeconds by viewModel.liveSecondsSinceLast.collectAsState()
+    val milestoneDialog by viewModel.milestoneDialog.collectAsState()
 
     var enteredPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
@@ -120,6 +121,8 @@ fun MainScreen(viewModel: CigViewModel) {
                 onLogSkippedClick = { viewModel.logSkippedCigarette() },
                 onUndoClick = { viewModel.undoLast() },
                 onAddPastDayClick = { daysAgo, count -> viewModel.logPastDay(daysAgo, count) },
+                milestoneDialog = milestoneDialog,
+                onDismissMilestoneDialog = { viewModel.dismissMilestoneDialog() },
                 modifier = Modifier.padding(innerPadding)
             )
             1 -> HistoryScreen(
@@ -139,6 +142,7 @@ fun MainScreen(viewModel: CigViewModel) {
                 onSavePrice = { viewModel.savePrice() },
                 onWishlistChange = { title, cost -> viewModel.onWishlistInputsChanged(title, cost) },
                 onSaveWishlist = { viewModel.saveWishlist() },
+                onClearWishlist = { viewModel.clearWishlist() },
                 onWidgetThemeChange = { viewModel.setWidgetTheme(it) },
                 onSetPinCode = { viewModel.setPinCode(it) },
                 onExportBackup = { viewModel.exportBackupJson { /* copy */ } },

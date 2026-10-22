@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,7 @@ fun SettingsScreen(
     onSavePrice: () -> Unit,
     onWishlistChange: (String, String) -> Unit,
     onSaveWishlist: () -> Unit,
+    onClearWishlist: () -> Unit,
     onWidgetThemeChange: (String) -> Unit,
     onSetPinCode: (String) -> Unit,
     onExportBackup: () -> Unit,
@@ -144,13 +146,105 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = onSaveWishlist,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA78BFA)),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.align(Alignment.End)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Save Wishlist", color = Color.White)
+                    OutlinedButton(
+                        onClick = onClearWishlist,
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Clear wishlist", color = TextSecondary)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onSaveWishlist,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA78BFA)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Save Wishlist", color = Color.White)
+                    }
+                }
+            }
+        }
+
+        // POSITIVE SHIFT TASKS (Collapsible list of all tasks)
+        var isTasksExpanded by remember { mutableStateOf(false) }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isTasksExpanded = !isTasksExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Positive Shift Tasks", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${HabitTasks.allTasks.size} tasks (tap to ${if (isTasksExpanded) "collapse" else "view all"})",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                    IconButton(onClick = { isTasksExpanded = !isTasksExpanded }) {
+                        Icon(
+                            imageVector = if (isTasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isTasksExpanded) "Collapse" else "Expand",
+                            tint = TextPrimary
+                        )
+                    }
+                }
+
+                if (isTasksExpanded) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HabitTasks.allTasks.forEach { task ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(DarkSurfaceVariant)
+                                    .padding(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = task.title,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = task.category,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AccentAmber
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = task.description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

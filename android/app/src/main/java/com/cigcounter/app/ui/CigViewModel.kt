@@ -14,6 +14,8 @@ import com.cigcounter.app.data.UserSettings
 import com.cigcounter.app.util.CalculationUtils
 import com.cigcounter.app.util.DamageReportGenerator
 import com.cigcounter.app.util.DateRangeUtils
+import com.cigcounter.app.util.HabitTask
+import com.cigcounter.app.util.HabitTasks
 import com.cigcounter.app.util.PriceValidationResult
 import com.cigcounter.app.widget.CigWidgetReceiver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +23,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
+
+data class MilestoneDialogData(
+    val milestone: Int,
+    val task: HabitTask
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CigViewModel(
@@ -70,12 +77,16 @@ class CigViewModel(
     private val _priceError = MutableStateFlow<String?>(null)
     val priceError: StateFlow<String?> = _priceError.asStateFlow()
 
-    // Wishlist state
-    private val _wishlistTitleInput = MutableStateFlow("Wireless Headphones")
+    // Wishlist state: defaults to empty strings (no hardcoded fallback)
+    private val _wishlistTitleInput = MutableStateFlow("")
     val wishlistTitleInput: StateFlow<String> = _wishlistTitleInput.asStateFlow()
 
-    private val _wishlistCostInput = MutableStateFlow("5000")
+    private val _wishlistCostInput = MutableStateFlow("")
     val wishlistCostInput: StateFlow<String> = _wishlistCostInput.asStateFlow()
+
+    // Positive Shift Milestone dialog state
+    private val _milestoneDialog = MutableStateFlow<MilestoneDialogData?>(null)
+    val milestoneDialog: StateFlow<MilestoneDialogData?> = _milestoneDialog.asStateFlow()
 
     // PIN lock state
     private val _isUnlocked = MutableStateFlow(true)
@@ -104,9 +115,48 @@ class CigViewModel(
                 if (_priceInput.value.isEmpty()) {
                     _priceInput.value = CalculationUtils.formatUnits(currentSettings.pricePerCigarette)
                 }
+                if (_wishlistTitleInput.value.isEmpty() && currentSettings.wishlistName.isNotEmpty()) {
+                    _wishlistTitleInput.value = currentSettings.wishlistName
+                }
+                if (_wishlistCostInput.value.isEmpty() && currentSettings.wishlistCost > 0.0) {
+                    _wishlistCostInput.value = CalculationUtils.formatUnits(currentSettings.wishlistCost)
+                }
                 if (currentSettings.pinCode.isNotEmpty()) {
                     _isUnlocked.value = false
                 }
+            }
+        }
+
+        // Positive shift milestone monitor:
+        // Triggers ONE random task every 10 smoked cigarettes in total (10, 20, 30...)
+        // If logged from the widget, triggers the next time the app opens.
+        viewModelScope.launch {
+            combine(
+                repository.getTotalSmokedCountFlow(),
+                repository.settingsFlow
+            ) { totalSmoked, currentSettings ->
+                Pair(totalSmoked, currentSettings.lastMilestoneShown)
+            }.collectLatest { (totalSmoked, lastMilestoneShown) ->
+                val milestone = (totalSmoked / 10) * 10
+                if (milestone >= 10 && milestone > lastMilestoneShown) {
+                    if (_milestoneDialog.value?.milestone != milestone) {
+                        _milestoneDialog.value = MilestoneDialogData(
+                            milestone = milestone,
+                            task = HabitTasks.getRandomTask()
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun dismissMilestoneDialog() {
+        val current = _milestoneDialog.value
+        _milestoneDialog.value = null
+        if (current != null) {
+            viewModelScope.launch {
+                val app = getApplication<CigApp>()
+                app.preferencesRepository.setLastMilestoneShown(current.milestone)
             }
         }
     }
@@ -200,12 +250,30 @@ class CigViewModel(
     }
 
     fun saveWishlist() {
-        val cost = _wishlistCostInput.value.toDoubleOrNull() ?: 5000.0
-        val title = _wishlistTitleInput.value.trim().ifEmpty { "My Goal" }
+        val rawTitle = _wishlistTitleInput.value.trim()
+        val rawCost = _wishlistCostInput.value.toDoubleOrNull() ?: 0.0
+        // If name or cost is left empty, save empty/0. Never save defaults like "My Goal" or 5000.
+        val finalTitle = if (rawTitle.isEmpty() || rawCost <= 0.0) "" else rawTitle
+        val finalCost = if (finalTitle.isEmpty() || rawCost <= 0.0) 0.0 else rawCost
+
         viewModelScope.launch {
             val app = getApplication<CigApp>()
-            app.preferencesRepository.setWishlist(title, cost)
-            _snackbarEvent.emit("Wishlist saved: $title (${CalculationUtils.formatUnits(cost)} units)")
+            app.preferencesRepository.setWishlist(finalTitle, finalCost)
+            if (finalTitle.isNotEmpty() && finalCost > 0.0) {
+                _snackbarEvent.emit("Wishlist saved: $finalTitle (${CalculationUtils.formatUnits(finalCost)} units)")
+            } else {
+                _snackbarEvent.emit("Wishlist cleared")
+            }
+        }
+    }
+
+    fun clearWishlist() {
+        _wishlistTitleInput.value = ""
+        _wishlistCostInput.value = ""
+        viewModelScope.launch {
+            val app = getApplication<CigApp>()
+            app.preferencesRepository.clearWishlist()
+            _snackbarEvent.emit("Wishlist cleared")
         }
     }
 

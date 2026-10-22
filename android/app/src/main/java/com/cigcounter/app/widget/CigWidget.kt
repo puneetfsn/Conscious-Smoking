@@ -8,11 +8,11 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -49,119 +49,91 @@ class CigWidget : GlanceAppWidget() {
         val backgroundColor = if (isWhiteTheme) ColorProvider(Color(0xFFF4F4F5)) else ColorProvider(Color(0xFF0F0F11))
         val surfaceColor = if (isWhiteTheme) ColorProvider(Color(0xFFE4E4E7)) else ColorProvider(Color(0xFF1E1E22))
         val primaryAccent = ColorProvider(Color(0xFFFF3B30)) // Nothing Red / Accent Coral
-        val ghostAccent = ColorProvider(Color(0xFF38BDF8))   // Cyan for Resisted/Ghost counter
         val textPrimary = if (isWhiteTheme) ColorProvider(Color(0xFF09090B)) else ColorProvider(Color(0xFFEDEDED))
         val textSecondary = if (isWhiteTheme) ColorProvider(Color(0xFF52525B)) else ColorProvider(Color(0xFFA1A1AA))
-        val textMuted = if (isWhiteTheme) ColorProvider(Color(0xFF71717A)) else ColorProvider(Color(0xFF71717A))
 
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .cornerRadius(22.dp)
-                .padding(12.dp)
+                .cornerRadius(18.dp)
+                .padding(10.dp)
         ) {
-            Column(
+            Row(
                 modifier = GlanceModifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top section: Dual Quick Buttons on LEFT (Smoked + / Resisted -), Stats on RIGHT
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                // Left Column: Main "+" and Ghost "🛡️"
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Column: Main "+" and Ghost "✓"
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Main "+" Button: logs cigarette directly without opening app
+                    Box(
+                        modifier = GlanceModifier
+                            .size(46.dp)
+                            .background(primaryAccent)
+                            .cornerRadius(23.dp)
+                            .clickable(actionRunCallback<LogSmokedActionCallback>()),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Main "+" Button
-                        Box(
-                            modifier = GlanceModifier
-                                .size(50.dp)
-                                .background(primaryAccent)
-                                .cornerRadius(25.dp)
-                                .clickable(actionRunCallback<LogSmokedActionCallback>()),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "+",
-                                style = TextStyle(color = ColorProvider(Color.White), fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                            )
-                        }
-
-                        Spacer(modifier = GlanceModifier.height(6.dp))
-
-                        // Ghost Counter Button ("Resisted craving!")
-                        Box(
-                            modifier = GlanceModifier
-                                .size(30.dp)
-                                .background(surfaceColor)
-                                .cornerRadius(15.dp)
-                                .clickable(actionRunCallback<LogResistedActionCallback>()),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "🛡️",
-                                style = TextStyle(fontSize = 13.sp)
-                            )
-                        }
+                        Text(
+                            text = "+",
+                            style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        )
                     }
 
-                    Spacer(modifier = GlanceModifier.width(14.dp))
+                    Spacer(modifier = GlanceModifier.height(4.dp))
 
-                    // Stats on the RIGHT (tap opens app)
-                    Column(
+                    // Ghost Counter Button ("Resisted craving!")
+                    Box(
                         modifier = GlanceModifier
-                            .defaultWeight()
-                            .fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically
+                            .size(26.dp)
+                            .background(surfaceColor)
+                            .cornerRadius(13.dp)
+                            .clickable(actionRunCallback<LogResistedActionCallback>()),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "Today:", style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(44.dp))
-                            Text(text = "${summary.todayCount} cigs", style = TextStyle(color = textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold))
-                            if (summary.todaySkippedCount > 0) {
-                                Text(text = " (${summary.todaySkippedCount} resisted)", style = TextStyle(color = ghostAccent, fontSize = 10.sp))
-                            }
-                        }
-
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-
-                        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "Week:", style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(44.dp))
-                            Text(text = "${summary.weekCount} cigs  ·  ${CalculationUtils.formatUnits(summary.weekSpentUnits)} u", style = TextStyle(color = textSecondary, fontSize = 11.sp))
-                        }
-
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-
-                        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "Pace:", style = TextStyle(color = textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(44.dp))
-                            Text(
-                                text = "≈ ${String.format("%.0f", summary.paceYearlyCigs)}/yr  ·  ${CalculationUtils.formatUnits(summary.paceYearlyUnits)} u",
-                                style = TextStyle(color = primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                            )
-                        }
+                        Text(
+                            text = "🛡️",
+                            style = TextStyle(fontSize = 12.sp)
+                        )
                     }
                 }
 
-                Spacer(modifier = GlanceModifier.height(6.dp))
+                Spacer(modifier = GlanceModifier.width(10.dp))
 
-                // Bottom strip: Saved today
-                Row(
+                // Stats on the RIGHT (tapping text area opens MainActivity)
+                Column(
                     modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .background(surfaceColor)
-                        .cornerRadius(10.dp)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .defaultWeight()
+                        .clickable(actionStartActivity<MainActivity>()),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "Today:", style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(42.dp))
+                        Text(text = "${summary.todayCount} cigs  ·  ${CalculationUtils.formatUnits(summary.todaySpentUnits)} u", style = TextStyle(color = textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                    }
+
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "Week:", style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(42.dp))
+                        Text(text = "${summary.weekCount} cigs  ·  ${CalculationUtils.formatUnits(summary.weekSpentUnits)} u", style = TextStyle(color = textSecondary, fontSize = 11.sp))
+                    }
+
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "Month:", style = TextStyle(color = textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.width(42.dp))
+                        Text(text = "${summary.monthCount} cigs  ·  ${CalculationUtils.formatUnits(summary.monthSpentUnits)} u", style = TextStyle(color = textSecondary, fontSize = 11.sp))
+                    }
+
+                    Spacer(modifier = GlanceModifier.height(3.dp))
+
                     Text(
-                        text = "Could save: ",
-                        style = TextStyle(color = textMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                    )
-                    Text(
-                        text = "${CalculationUtils.formatUnits(summary.todaySavedUnits)} units today",
-                        style = TextStyle(color = primaryAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        text = "Could have saved: ${CalculationUtils.formatUnits(summary.todaySavedUnits)} u today",
+                        style = TextStyle(color = primaryAccent, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     )
                 }
             }

@@ -69,6 +69,10 @@ class CigaretteRepository(
 
     suspend fun getSmokedCountBetween(from: Long, to: Long): Int = dao.countSmokedBetween(from, to)
 
+    fun getTotalSmokedCountFlow(): Flow<Int> = dao.countTotalSmokedFlow()
+
+    suspend fun getTotalSmokedCount(): Int = dao.countTotalSmoked()
+
     fun getHabitSummaryFlow(): Flow<HabitSummary> {
         val startOfToday = DateRangeUtils.getStartOfTodayMillis()
         val startOfWeek = DateRangeUtils.getWeekStartMillis()

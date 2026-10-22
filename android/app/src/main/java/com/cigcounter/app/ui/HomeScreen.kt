@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cigcounter.app.data.HabitSummary
 import com.cigcounter.app.data.UserSettings
+import com.cigcounter.app.ui.MilestoneDialogData
 import com.cigcounter.app.ui.theme.*
 import com.cigcounter.app.util.CalculationUtils
 import com.cigcounter.app.util.HabitTasks
@@ -36,6 +37,8 @@ fun HomeScreen(
     onLogSkippedClick: () -> Unit,
     onUndoClick: () -> Unit,
     onAddPastDayClick: (daysAgo: Long, count: Int) -> Unit,
+    milestoneDialog: MilestoneDialogData? = null,
+    onDismissMilestoneDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -247,40 +250,42 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 3. WISHLIST GOAL: "HEADPHONES IN 34 DAYS"
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CardGiftcard, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Wishlist Motivation", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Goal: ${settings.wishlistName} (${CalculationUtils.formatUnits(settings.wishlistCost)} units)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(DarkSurfaceVariant).padding(10.dp)
-                ) {
+        // 3. WISHLIST GOAL: Shown ONLY if name is not blank AND cost > 0
+        if (settings.wishlistName.isNotBlank() && settings.wishlistCost > 0.0) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.CardGiftcard, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Wishlist Motivation", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "🎧 Smoke 2 less per day = ${settings.wishlistName} in $wishlistDaysIfReduceTwo days!",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFA78BFA)
+                        text = "Goal: ${settings.wishlistName} (${CalculationUtils.formatUnits(settings.wishlistCost)} units)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(DarkSurfaceVariant).padding(10.dp)
+                    ) {
+                        Text(
+                            text = "🎧 Smoke 2 less per day = ${settings.wishlistName} in $wishlistDaysIfReduceTwo days!",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA78BFA)
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
         // 4. POSITIVE SHIFT TASKS
         Card(
@@ -387,6 +392,50 @@ fun HomeScreen(
             dismissButton = {
                 TextButton(onClick = { showEditPastDaysDialog = false }) {
                     Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
+    // Positive Shift Milestone Dialog (Triggered every 10 smoked cigarettes in total)
+    if (milestoneDialog != null) {
+        AlertDialog(
+            onDismissRequest = onDismissMilestoneDialog,
+            title = {
+                Text(
+                    text = "Positive Shift (${milestoneDialog.milestone} Cigarettes)",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "You reached ${milestoneDialog.milestone} cigarettes. Take a moment for this gentle habit:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = milestoneDialog.task.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentCoral
+                    )
+                    Text(
+                        text = milestoneDialog.task.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = onDismissMilestoneDialog,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                ) {
+                    Text("Dismiss")
                 }
             },
             containerColor = DarkSurface
