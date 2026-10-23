@@ -66,7 +66,7 @@ object HabitTasks {
         HabitTask(
             id = "donate_cause",
             title = "Donate 1 unit ($1) to schizophrenia awareness",
-            description = "Support mental health awareness and app maintenance (UPI: $DONATE_UPI_ID).",
+            description = "Support mental health awareness and app maintenance.",
             difficultyLevel = "Easy & Rewarding",
             category = "Giving"
         ),

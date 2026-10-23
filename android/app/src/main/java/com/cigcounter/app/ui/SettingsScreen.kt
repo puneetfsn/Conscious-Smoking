@@ -1,11 +1,13 @@
 package com.cigcounter.app.ui
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -502,37 +504,62 @@ fun SettingsScreen(
             }
         }
 
-        // 6. DONATE TO DEVELOPER & SCHIZOPHRENIA AWARENESS
+        // 6. SUPPORT SMOKELEDGER (DONATE VIA UPI)
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                val upiUri = Uri.Builder()
+                    .scheme("upi")
+                    .authority("pay")
+                    .appendQueryParameter("pa", HabitTasks.DONATE_UPI_ID)
+                    .appendQueryParameter("pn", "SmokeLedger")
+                    .appendQueryParameter("tn", "Support SmokeLedger development")
+                    .appendQueryParameter("cu", "INR")
+                    .build()
+                val upiIntent = Intent(Intent.ACTION_VIEW, upiUri)
+                val chooser = Intent.createChooser(upiIntent, "Donate using UPI")
+                try {
+                    context.startActivity(chooser)
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(
+                        context,
+                        "No UPI application was found on this device.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp)
+                .semantics { contentDescription = "Donate using UPI" },
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.VolunteerActivism, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Donate & Schizophrenia Awareness", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Direct support to developer Puneet towards app maintenance and schizophrenia awareness.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(DarkSurfaceVariant).padding(10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = HabitTasks.DONATE_UPI_ID, fontWeight = FontWeight.Bold, color = AccentAmber)
-                    OutlinedButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("UPI ID", HabitTasks.DONATE_UPI_ID))
-                            Toast.makeText(context, "Copied ${HabitTasks.DONATE_UPI_ID}", Toast.LENGTH_SHORT).show()
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Copy UPI")
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VolunteerActivism,
+                    contentDescription = null,
+                    tint = AccentAmber,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Support SmokeLedger",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Donate using UPI",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
                 }
             }
         }
