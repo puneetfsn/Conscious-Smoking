@@ -80,7 +80,7 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // App header
-        Text(text = "SmokeLedger", style = MaterialTheme.typography.headlineMedium, color = TextPrimary)
+        Text(text = "Conscious Smoking", style = MaterialTheme.typography.headlineMedium, color = TextPrimary)
         Text(text = "Zero guilt • Pure math • Habit shift", style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.padding(top = 2.dp, bottom = 14.dp))
 
         // 1. LIVE TIMER: TIME SINCE LAST CIGARETTE

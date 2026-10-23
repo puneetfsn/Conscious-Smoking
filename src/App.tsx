@@ -254,7 +254,7 @@ export default function App() {
   // Feature 9: Export JSON Backup
   const handleExportBackup = () => {
     const backupObj = {
-      app: "SmokeLedger",
+      app: "Conscious Smoking",
       version: "1.2.0",
       exportedAt: new Date().toISOString(),
       pricePerCigarette: pricePerUnit,
@@ -347,17 +347,6 @@ export default function App() {
     return val % 1 === 0 ? val.toLocaleString() : val.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   }
 
-  const copyUpiId = async () => {
-    try {
-      await navigator.clipboard.writeText("puneetfsn@ybl");
-      setCopiedUpi(true);
-      setSnackbar("Copied UPI ID: puneetfsn@ybl");
-      setTimeout(() => setCopiedUpi(false), 2500);
-    } catch {
-      setSnackbar("UPI ID: puneetfsn@ybl");
-    }
-  };
-
   const handleCopyCode = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -371,23 +360,17 @@ export default function App() {
   const handleDownloadZip = async () => {
     setIsZipping(true);
     try {
-      const zip = new JSZip();
-      ANDROID_PROJECT_FILES.forEach(file => {
-        zip.file(file.path, file.content);
-      });
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'SmokeLedger-Complete-Android-Project.zip';
+      a.href = '/Conscious-Smoking-Android.zip';
+      a.download = 'Conscious-Smoking-Android.zip';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
       setZipSuccess(true);
+      setSnackbar("Downloaded complete Conscious Smoking Android project (all 55 files + Gradle wrapper)!");
       setTimeout(() => setZipSuccess(false), 4000);
     } catch (err) {
-      console.error("Failed to generate zip", err);
+      console.error("Failed to download zip", err);
     } finally {
       setIsZipping(false);
     }
@@ -406,11 +389,11 @@ export default function App() {
       <header className="border-b border-[#202026] bg-[#121216]/95 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff6e40] to-[#ff3b30] flex items-center justify-center shadow-lg shadow-[#ff6e40]/30 font-bold text-white text-xl">
-            S
+            C
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-lg text-white tracking-tight">SmokeLedger</h1>
+              <h1 className="font-bold text-lg text-white tracking-tight">Conscious Smoking</h1>
               <span className="text-[11px] font-semibold bg-[#27272a] text-[#ff6e40] px-2 py-0.5 rounded-full border border-[#3f3f46]">
                 Nothing OS Native
               </span>
@@ -478,7 +461,7 @@ export default function App() {
             className="flex items-center gap-1.5 bg-[#f59e0b]/15 hover:bg-[#f59e0b]/25 border border-[#f59e0b]/40 text-[#f59e0b] px-3 py-2 rounded-xl text-xs font-semibold transition"
           >
             <Heart className="w-3.5 h-3.5 fill-[#f59e0b]" />
-            Donate (puneetfsn@ybl)
+            Donate using UPI
           </button>
 
           <button
@@ -518,7 +501,7 @@ export default function App() {
                     <div className="w-16 h-16 rounded-full bg-[#1e1e24] flex items-center justify-center border border-[#2a2a32]">
                       <Lock className="w-8 h-8 text-[#ff6e40]" />
                     </div>
-                    <h3 className="font-bold text-white text-base">SmokeLedger Locked</h3>
+                    <h3 className="font-bold text-white text-base">Conscious Smoking Locked</h3>
                     <p className="text-xs text-[#a1a1aa] max-w-[220px]">
                       Your habit logs are private. Enter your 4-digit PIN to access:
                     </p>
@@ -561,7 +544,7 @@ export default function App() {
                     {/* SCREEN 1: HOME */}
                     {phoneScreen === 'home' && (
                       <div className="flex flex-col items-center text-center">
-                        <h2 className="text-xl font-bold text-white mt-1">SmokeLedger</h2>
+                        <h2 className="text-xl font-bold text-white mt-1">Conscious Smoking</h2>
                         <p className="text-xs text-[#a1a1aa] mt-0.5 mb-4">Zero guilt • Pure math • Habit shift</p>
 
                         {/* FEATURE 4: LIVE TIMER CARD */}
@@ -927,6 +910,22 @@ export default function App() {
                           {priceError && <p className="text-[10px] text-[#f87171]">{priceError}</p>}
                         </div>
 
+                        {/* SUPPORT CONSCIOUS SMOKING (DONATE VIA UPI) */}
+                        <div
+                          onClick={() => setSnackbar("Opening UPI chooser: Donate using UPI (Google Pay, PhonePe, Paytm...)")}
+                          className="bg-[#141418] border border-[#222228] hover:border-[#ff6e40]/50 rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition active:scale-[0.98]"
+                          role="button"
+                          aria-label="Donate using UPI"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/10 flex items-center justify-center text-[#f59e0b] shrink-0">
+                            <Heart className="w-5 h-5 text-[#f59e0b] fill-[#f59e0b]/20" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="text-xs font-bold text-white">Support Conscious Smoking</div>
+                            <div className="text-[10px] text-[#a1a1aa] mt-0.5">Donate using UPI</div>
+                          </div>
+                        </div>
+
                         {/* Danger Zone */}
                         <div className="bg-[#141418] border border-[#222228] rounded-2xl p-4">
                           <button
@@ -1043,7 +1042,7 @@ export default function App() {
                       <div
                         onClick={() => {
                           setPhoneScreen('home');
-                          setSnackbar("Glance Action: Opened SmokeLedger");
+                          setSnackbar("Glance Action: Opened Conscious Smoking");
                         }}
                         className="flex-1 cursor-pointer font-mono"
                       >
@@ -1081,7 +1080,7 @@ export default function App() {
 
               {/* 9 Features Overview Card */}
               <div className="bg-[#121216] border border-[#202026] rounded-3xl p-6 text-left space-y-3">
-                <h4 className="font-bold text-white text-sm">9 Features Integrated in SmokeLedger</h4>
+                <h4 className="font-bold text-white text-sm">9 Features Integrated in Conscious Smoking</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#18181c] p-2.5 rounded-xl border border-[#26262e]">
                     <span className="text-[#38bdf8] font-bold block">1. Ghost Counter</span>
@@ -1151,7 +1150,7 @@ export default function App() {
               {/* REPORT PREVIEW */}
               <div className="bg-white text-black p-8 rounded-2xl shadow-2xl font-serif text-xs space-y-6 max-w-2xl mx-auto border border-gray-300">
                 <div className="border-b-2 border-black pb-3">
-                  <h2 className="text-xl font-bold font-sans tracking-tight">SmokeLedger — Clinical Damage Report</h2>
+                  <h2 className="text-xl font-bold font-sans tracking-tight">Conscious Smoking — Clinical Damage Report</h2>
                   <div className="text-[11px] text-gray-600 font-sans mt-0.5">
                     Generated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} • Confidential Patient Self-Report
                   </div>
@@ -1349,7 +1348,7 @@ export default function App() {
             <div className="bg-[#121216] border border-[#202026] rounded-3xl p-6">
               <h3 className="font-bold text-white text-lg flex items-center gap-2 mb-3">
                 <Smartphone className="w-5 h-5 text-[#ff6e40]" />
-                How to Build &amp; Install SmokeLedger on Android
+                How to Build &amp; Install Conscious Smoking on Android
               </h3>
               <div className="space-y-3 text-xs text-[#a1a1aa] leading-relaxed">
                 <div className="flex gap-3 items-start bg-[#18181c] p-3.5 rounded-2xl border border-[#26262e]">
@@ -1372,7 +1371,7 @@ export default function App() {
                   <span className="w-5 h-5 rounded-full bg-[#ff6e40] text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
                   <div>
                     <strong className="text-white">Add Nothing-Style Widget:</strong>
-                    <p className="mt-0.5">Long-press your home screen, tap <strong>Widgets</strong>, find <strong>SmokeLedger</strong>, and place the NDot widget on your screen!</p>
+                    <p className="mt-0.5">Long-press your home screen, tap <strong>Widgets</strong>, find <strong>Conscious Smoking</strong>, and place the NDot widget on your screen!</p>
                   </div>
                 </div>
               </div>
@@ -1438,7 +1437,7 @@ export default function App() {
 
             <div className="bg-white text-black p-5 rounded-xl font-sans text-xs space-y-3">
               <div className="border-b border-black pb-2">
-                <div className="font-bold text-sm">SmokeLedger — Clinical Damage Report</div>
+                <div className="font-bold text-sm">Conscious Smoking — Clinical Damage Report</div>
                 <div className="text-[10px] text-gray-600">Generated: {new Date().toLocaleDateString()}</div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1518,39 +1517,32 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: DONATE & SCHIZOPHRENIA AWARENESS */}
+      {/* MODAL: DONATE VIA UPI */}
       {showDonateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
           <div className="bg-[#18181c] border border-[#26262e] rounded-3xl p-6 max-w-md w-full text-left space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#f59e0b]">
                 <Heart className="w-5 h-5 fill-[#f59e0b]" />
-                <h4 className="font-bold text-white text-base">Support Developer &amp; Awareness</h4>
+                <h4 className="font-bold text-white text-base">Support Conscious Smoking</h4>
               </div>
               <button onClick={() => setShowDonateModal(false)} className="text-[#a1a1aa] hover:text-white">✕</button>
             </div>
 
             <p className="text-xs text-[#a1a1aa] leading-relaxed">
-              Donate directly to developer Puneet towards open-source app maintenance and an individual awareness campaign towards schizophrenia.
+              Support development and ongoing maintenance of the Conscious Smoking habit awareness app.
             </p>
 
-            <div className="bg-[#202028] p-4 rounded-2xl border border-[#2a2a34] space-y-2">
-              <div className="text-[11px] text-[#71717a]">UPI ID (PhonePe / GPay / Paytm / BHIM)</div>
-              <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-base text-[#f59e0b]">puneetfsn@ybl</span>
-                <button
-                  onClick={copyUpiId}
-                  className="flex items-center gap-1.5 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-semibold px-3 py-1.5 rounded-xl text-xs transition"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  {copiedUpi ? "Copied!" : "Copy UPI"}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-[#202028]/70 p-3 rounded-2xl border border-[#2a2a34] text-[11px] text-[#a1a1aa]">
-              🧠 <strong>Schizophrenia Awareness:</strong> Early intervention, empathy, and open dialogue reduce trauma and restore lives.
-            </div>
+            <button
+              onClick={() => {
+                setSnackbar("Launching UPI Chooser: Donate using UPI (Google Pay, PhonePe, Paytm...)");
+                setShowDonateModal(false);
+              }}
+              className="w-full py-3 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-[#f59e0b]/20"
+            >
+              <Heart className="w-4 h-4 fill-black" />
+              Donate using UPI
+            </button>
 
             <button
               onClick={() => setShowDonateModal(false)}

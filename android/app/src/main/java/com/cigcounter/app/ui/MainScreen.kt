@@ -55,7 +55,7 @@ fun MainScreen(viewModel: CigViewModel) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = AccentCoral, modifier = Modifier.size(54.dp))
-                Text(text = "SmokeLedger Locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(text = "Conscious Smoking Locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Text(text = "Enter your 4-digit PIN to access private logs:", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
 
                 OutlinedTextField(

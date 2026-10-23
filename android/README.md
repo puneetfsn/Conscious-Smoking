@@ -1,4 +1,4 @@
-# CigCounter 🚬⏱️
+# Conscious Smoking 🚬⏱️
 
 A fully offline, privacy-first cigarette counter and habit awareness app for Android with a quick-tap home-screen widget.
 

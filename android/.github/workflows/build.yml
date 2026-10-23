@@ -48,6 +48,6 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CigCounter-Debug-APK
+          name: Conscious-Smoking-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14

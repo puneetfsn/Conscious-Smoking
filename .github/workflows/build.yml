@@ -1,16 +1,20 @@
-name: Build Debug APK
+name: Build Conscious Smoking APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    name: Build Debug APK
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android
 
     steps:
       - name: Checkout code
@@ -22,16 +26,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle (reads version from wrapper properties)
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 'wrapper'
+          gradle-version: 8.7
 
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
+        run: |
+          if [ -d "android" ]; then
+            cd android
+          fi
+          if [ ! -f "gradlew" ]; then
+            echo "Generating Gradle wrapper..."
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SmokeLedger-debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Conscious-Smoking-Debug-APK
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.apk
+          retention-days: 14

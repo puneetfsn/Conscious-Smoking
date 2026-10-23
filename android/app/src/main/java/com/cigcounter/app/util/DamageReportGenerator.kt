@@ -66,7 +66,7 @@ object DamageReportGenerator {
         var y = 45f
 
         // Header
-        canvas.drawText("SmokeLedger — Clinical Damage Report", 40f, y, titlePaint)
+        canvas.drawText("Conscious Smoking — Clinical Damage Report", 40f, y, titlePaint)
         y += 16f
         val nowStr = LocalDate.now(zoneId).format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
         canvas.drawText("Generated on: $nowStr  •  Confidential Medical / Therapy Profile", 40f, y, subPaint)
@@ -213,12 +213,12 @@ object DamageReportGenerator {
         } else {
             // Purge previous reports to prevent cache bloat
             reportsDir.listFiles()?.forEach { file ->
-                if (file.name.startsWith("SmokeLedger_Damage_Report")) {
+                if (file.name.startsWith("Conscious_Smoking_Damage_Report") || file.name.startsWith("SmokeLedger_Damage_Report")) {
                     file.delete()
                 }
             }
         }
-        val outputFile = File(reportsDir, "SmokeLedger_Damage_Report.pdf")
+        val outputFile = File(reportsDir, "Conscious_Smoking_Damage_Report.pdf")
 
         try {
             FileOutputStream(outputFile).use { out ->

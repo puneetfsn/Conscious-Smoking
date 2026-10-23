@@ -172,7 +172,7 @@ fun SettingsScreen(
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "application/pdf"
                                     putExtra(Intent.EXTRA_STREAM, uri)
-                                    putExtra(Intent.EXTRA_SUBJECT, "SmokeLedger Clinical Damage Report")
+                                    putExtra(Intent.EXTRA_SUBJECT, "Conscious Smoking Clinical Damage Report")
                                     clipData = ClipData.newRawUri("Damage Report", uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
@@ -511,8 +511,8 @@ fun SettingsScreen(
                     .scheme("upi")
                     .authority("pay")
                     .appendQueryParameter("pa", HabitTasks.DONATE_UPI_ID)
-                    .appendQueryParameter("pn", "SmokeLedger")
-                    .appendQueryParameter("tn", "Support SmokeLedger development")
+                    .appendQueryParameter("pn", "Conscious Smoking")
+                    .appendQueryParameter("tn", "Support Conscious Smoking development")
                     .appendQueryParameter("cu", "INR")
                     .build()
                 val upiIntent = Intent(Intent.ACTION_VIEW, upiUri)
@@ -549,7 +549,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Support SmokeLedger",
+                        text = "Support Conscious Smoking",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -595,7 +595,7 @@ fun SettingsScreen(
             title = { Text(text = "Set / Change PIN", color = TextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter a 4-digit PIN to lock SmokeLedger. Leave empty to disable lock.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text("Enter a 4-digit PIN to lock Conscious Smoking. Leave empty to disable lock.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                     OutlinedTextField(
                         value = pinDialogInput,
                         onValueChange = { if (it.length <= 4) pinDialogInput = it },
@@ -632,7 +632,7 @@ fun SettingsScreen(
             title = { Text(text = "Restore JSON Backup", color = TextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Paste previously exported SmokeLedger JSON:", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text("Paste previously exported Conscious Smoking JSON:", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                     OutlinedTextField(
                         value = importJsonInput,
                         onValueChange = { importJsonInput = it },

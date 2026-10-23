@@ -380,7 +380,7 @@ class CigWidget : GlanceAppWidget() {
 
 /**
  * Refreshes the widget that was tapped immediately, then synchronizes
- * any other SmokeLedger widgets that might be on the home screen.
+ * any other Conscious Smoking widgets that might be on the home screen.
  */
 private suspend fun refreshWidget(
     context: Context,
