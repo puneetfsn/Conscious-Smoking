@@ -202,6 +202,73 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(if (isGeneratingPdf) "Generating PDF..." else "Generate & Share PDF")
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DarkOutline))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // HEALTH BENEFITS & PHYSIOLOGICAL RECOVERY SECTION
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Health Recovery Timeline",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+
+                    val smokeFreeText = remember(liveSecondsSinceLast) {
+                        if (liveSecondsSinceLast == null) "No smoke recorded"
+                        else {
+                            val h = liveSecondsSinceLast / 3600
+                            val m = (liveSecondsSinceLast % 3600) / 60
+                            if (h > 0) "${h}h ${m}m smoke-free" else "${m}m smoke-free"
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DarkSurfaceVariant)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = smokeFreeText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tangible bodily recovery milestones based on time elapsed since your last cigarette:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HEALTH_BENEFIT_MILESTONES.forEach { milestone ->
+                        HealthMilestoneItem(
+                            milestone = milestone,
+                            liveSecondsSinceLast = liveSecondsSinceLast
+                        )
+                    }
+                }
             }
         }
 
@@ -375,4 +442,419 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text 
+                        text = "Support Conscious Smoking",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Donate using UPI",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+
+        // 7. DANGER ZONE
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = "Danger Zone", style = MaterialTheme.typography.titleMedium, color = ErrorRed)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Permanently wipe all cigarette rows from device.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { showDeleteConfirmDialog = true },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Delete All Data", color = ErrorRed)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // PIN Dialog with Old PIN Verification
+    if (showPinDialog) {
+        val hasExistingPin = settings.pinCode.isNotEmpty()
+
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = {
+                Text(
+                    text = if (!hasExistingPin) "Set 4-Digit PIN Lock" else if (!isOldPinVerified) "Enter Current PIN" else "Reset or Remove PIN",
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (!hasExistingPin) {
+                        // Setting a brand new PIN
+                        Text(
+                            text = "Choose a 4-digit numeric PIN to secure your smoking log from others:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = newPinInput,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
+                            placeholder = { Text("4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (!isOldPinVerified) {
+                        // Step 1: Verify Current PIN
+                        Text(
+                            text = "Please enter your current 4-digit PIN to verify your identity:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = oldPinInput,
+                            onValueChange = {
+                                if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                                    oldPinInput = it
+                                    pinErrorMessage = null
+                                }
+                            },
+                            placeholder = { Text("Current 4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            isError = pinErrorMessage != null,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (pinErrorMessage != null) {
+                            Text(
+                                text = pinErrorMessage ?: "",
+                                color = ErrorRed,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    } else {
+                        // Step 2: Old PIN Verified -> Remove or Set New PIN
+                        Text(
+                            text = "✓ Current PIN verified. You can now remove the lock or set a new PIN:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SuccessGreen
+                        )
+
+                        Button(
+                            onClick = {
+                                showPinDialog = false
+                                onSetPinCode("")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Remove PIN (Disable Lock)")
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "— OR SET A NEW 4-DIGIT PIN —",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+
+                        OutlinedTextField(
+                            value = newPinInput,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
+                            placeholder = { Text("New 4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (!hasExistingPin) {
+                    Button(
+                        onClick = {
+                            if (newPinInput.length == 4) {
+                                showPinDialog = false
+                                onSetPinCode(newPinInput)
+                            }
+                        },
+                        enabled = newPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                    ) {
+                        Text("Set PIN")
+                    }
+                } else if (!isOldPinVerified) {
+                    Button(
+                        onClick = {
+                            if (oldPinInput == settings.pinCode) {
+                                isOldPinVerified = true
+                                pinErrorMessage = null
+                            } else {
+                                pinErrorMessage = "Incorrect current PIN. Please try again."
+                            }
+                        },
+                        enabled = oldPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                    ) {
+                        Text("Verify")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            if (newPinInput.length == 4) {
+                                showPinDialog = false
+                                onSetPinCode(newPinInput)
+                            }
+                        },
+                        enabled = newPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
+                    ) {
+                        Text("Save New PIN")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
+    // JSON Import Dialog
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text(text = "Restore JSON Backup", color = TextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Paste previously exported Conscious Smoking JSON:", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    OutlinedTextField(
+                        value = importJsonInput,
+                        onValueChange = { importJsonInput = it },
+                        modifier = Modifier.fillMaxWidth().height(140.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showImportDialog = false
+                        onImportBackup(importJsonInput)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                ) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text(text = "Delete all data?", color = TextPrimary) },
+            text = { Text(text = "Permanently erases all logged rows from local database.", color = TextSecondary) },
+            confirmButton = {
+                Button(onClick = { showDeleteConfirmDialog = false; onDeleteAllData() }, colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)) {
+                    Text("Delete Everything", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel", color = TextSecondary) }
+            },
+            containerColor = DarkSurface
+        )
+    }
+}
+
+data class HealthMilestone(
+    val title: String,
+    val targetSeconds: Long,
+    val targetLabel: String,
+    val description: String
+)
+
+val HEALTH_BENEFIT_MILESTONES = listOf(
+    HealthMilestone(
+        title = "Heart Rate & Blood Pressure",
+        targetSeconds = 20 * 60L,
+        targetLabel = "20 min",
+        description = "Pulse and blood pressure normalize to baseline; peripheral circulation begins warming."
+    ),
+    HealthMilestone(
+        title = "Carbon Monoxide Normalization",
+        targetSeconds = 8 * 3600L,
+        targetLabel = "8 hours",
+        description = "Blood CO drops by 50%; arterial oxygen saturation returns back to healthy baseline."
+    ),
+    HealthMilestone(
+        title = "Cardiac Risk & Lung Debris Clearance",
+        targetSeconds = 24 * 3600L,
+        targetLabel = "24 hours",
+        description = "Sudden heart attack risk starts falling; lungs begin clearing out mucus and smoke debris."
+    ),
+    HealthMilestone(
+        title = "Nicotine Elimination & Nerve Regrowth",
+        targetSeconds = 48 * 3600L,
+        targetLabel = "48 hours",
+        description = "100% of nicotine is eliminated from body; damaged nerve endings regrow; taste and smell sharpen."
+    ),
+    HealthMilestone(
+        title = "Bronchial Tube Relaxation",
+        targetSeconds = 72 * 3600L,
+        targetLabel = "72 hours",
+        description = "Bronchial airways relax, breathing becomes noticeably effortless; lung volume expands."
+    ),
+    HealthMilestone(
+        title = "Circulation & Physical Stamina",
+        targetSeconds = 14 * 86400L,
+        targetLabel = "2 weeks",
+        description = "Blood circulation to limbs and organs surges; aerobic stamina improves by up to 30%."
+    )
+)
+
+@Composable
+fun HealthMilestoneItem(
+    milestone: HealthMilestone,
+    liveSecondsSinceLast: Long?
+) {
+    val progress = remember(liveSecondsSinceLast, milestone.targetSeconds) {
+        if (liveSecondsSinceLast == null) 0f
+        else (liveSecondsSinceLast.toFloat() / milestone.targetSeconds.toFloat()).coerceIn(0f, 1f)
+    }
+    val isAchieved = progress >= 1f
+    val percentInt = (progress * 100).toInt()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(DarkSurfaceVariant)
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = if (isAchieved) Icons.Default.CheckCircle else Icons.Default.Timer,
+                    contentDescription = null,
+                    tint = if (isAchieved) SuccessGreen else Color(0xFF38BDF8),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = milestone.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isAchieved) SuccessGreen.copy(alpha = 0.15f) else Color(0xFF38BDF8).copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = if (isAchieved) "RESTORED" else milestone.targetLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isAchieved) SuccessGreen else Color(0xFF38BDF8)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = milestone.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            fontSize = 12.sp,
+            lineHeight = 16.sp
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Visual Progress Bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(DarkOutline)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fraction = progress.coerceAtLeast(0.01f))
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isAchieved) SuccessGreen else Color(0xFF38BDF8))
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val statusLabel = if (isAchieved) {
+                "Fully normalized"
+            } else if (liveSecondsSinceLast == null) {
+                "Waiting for smoke event"
+            } else {
+                val remainingSec = (milestone.targetSeconds - liveSecondsSinceLast).coerceAtLeast(0L)
+                val remH = remainingSec / 3600
+                val remM = (remainingSec % 3600) / 60
+                val remText = if (remH > 0) "${remH}h ${remM}m left" else "${remM}m left"
+                "$percentInt% reached • $remText"
+            }
+
+            Text(
+                text = statusLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isAchieved) SuccessGreen else TextMuted,
+                fontSize = 11.sp
+            )
+
+            Text(
+                text = "$percentInt%",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (isAchieved) SuccessGreen else TextSecondary,
+                fontSize = 11.sp
+            )
+        }
+    }
+}
