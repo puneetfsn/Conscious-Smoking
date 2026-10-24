@@ -203,72 +203,7 @@ fun SettingsScreen(
                     Text(if (isGeneratingPdf) "Generating PDF..." else "Generate & Share PDF")
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(DarkOutline))
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // HEALTH BENEFITS & PHYSIOLOGICAL RECOVERY SECTION
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Health Recovery Timeline",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-
-                    val smokeFreeText = remember(liveSecondsSinceLast) {
-                        if (liveSecondsSinceLast == null) "No smoke recorded"
-                        else {
-                            val h = liveSecondsSinceLast / 3600
-                            val m = (liveSecondsSinceLast % 3600) / 60
-                            if (h > 0) "${h}h ${m}m smoke-free" else "${m}m smoke-free"
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(DarkSurfaceVariant)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = smokeFreeText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SuccessGreen,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Tangible bodily recovery milestones based on time elapsed since your last cigarette:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    fontSize = 12.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HEALTH_BENEFIT_MILESTONES.forEach { milestone ->
-                        HealthMilestoneItem(
-                            milestone = milestone,
-                            liveSecondsSinceLast = liveSecondsSinceLast
-                        )
-                    }
-                }
+                
             }
         }
 
