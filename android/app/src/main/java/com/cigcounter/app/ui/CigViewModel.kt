@@ -150,8 +150,8 @@ class CigViewModel(
             ) { totalSmoked, currentSettings ->
                 Pair(totalSmoked, currentSettings.lastMilestoneShown)
             }.collectLatest { (totalSmoked, lastMilestoneShown) ->
-                val milestone = (totalSmoked / 10) * 10
-                if (milestone >= 10 && milestone > lastMilestoneShown) {
+                val milestone = (totalSmoked / 5) * 5
+                if (milestone >= 5 && milestone > lastMilestoneShown) {
                     if (_milestoneDialog.value?.milestone != milestone) {
                         _milestoneDialog.value = MilestoneDialogData(
                             milestone = milestone,

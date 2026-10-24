@@ -23,12 +23,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 import com.cigcounter.app.data.HabitSummary
 import com.cigcounter.app.data.UserSettings
 import com.cigcounter.app.ui.MilestoneDialogData
 import com.cigcounter.app.ui.theme.*
 import com.cigcounter.app.util.CalculationUtils
-import com.cigcounter.app.util.HabitTasks
 
 @Composable
 fun HomeScreen(
@@ -47,7 +47,7 @@ fun HomeScreen(
     val haptic = LocalHapticFeedback.current
     var isPressedSmoked by remember { mutableStateOf(false) }
     var isPressedSkipped by remember { mutableStateOf(false) }
-    var completedTasks by remember { mutableStateOf(setOf<String>()) }
+    var isRecoveryExpanded by remember { mutableStateOf(true) }
     var showEditPastDaysDialog by remember { mutableStateOf(false) }
 
     val scaleSmoked by animateFloatAsState(targetValue = if (isPressedSmoked) 0.90f else 1f, label = "button_scale_smoked")
@@ -63,14 +63,6 @@ fun HomeScreen(
             String.format("%02dh %02dm %02ds", h, m, s)
         }
     }
-
-    // Wishlist calculations
-    val wishlistDaysIfReduceTwo = remember(settings.wishlistCost, settings.pricePerCigarette) {
-        val dailySavingsFromTwo = 2.0 * settings.pricePerCigarette
-        if (dailySavingsFromTwo > 0) Math.ceil(settings.wishlistCost / dailySavingsFromTwo).toInt() else 30
-    }
-
-    val suggestedTasks = HabitTasks.getSuggestedTasks(summary.todayCount)
 
     Column(
         modifier = modifier
@@ -102,9 +94,245 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // CURRENT SMOKING STREAK (REVERSE PSYCHOLOGY)
+        // 2. TODAY'S HERO DISPLAY (TODAY SMOKED VS GHOST COUNTER)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Smoked counter
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "TODAY SMOKED", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                Text(text = "${summary.todayCount}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = if (summary.todayCount > 0) AccentCoral else TextPrimary)
+                Text(text = "${CalculationUtils.formatUnits(summary.todaySpentUnits)} units", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            }
+
+            // Divider
+            Box(modifier = Modifier.width(1.dp).height(50.dp).background(DarkOutline))
+
+            // Ghost Counter (Resisted cravings)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "GHOST COUNTER", style = MaterialTheme.typography.labelSmall, color = Color(0xFF38BDF8))
+                Text(text = "${summary.todaySkippedCount}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+                Text(text = "${CalculationUtils.formatUnits(summary.todaySkippedSavedUnits)} units saved", style = MaterialTheme.typography.bodySmall, color = Color(0xFF38BDF8))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // DUAL ACTION BUTTONS: Smoked (+) and Resisted Cravings (Ghost Counter) right beside each other
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Main Button: Log Cigarette
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(92.dp)
+                        .scale(scaleSmoked)
+                        .clip(CircleShape)
+                        .background(AccentCoral)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onPress = {
+                                isPressedSmoked = true
+                                val released = tryAwaitRelease()
+                                isPressedSmoked = false
+                                if (released) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLogClick()
+                                }
+                            })
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Log Smoked", tint = Color.White, modifier = Modifier.size(46.dp))
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = "I Smoked", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
+
+            Spacer(modifier = Modifier.width(36.dp))
+
+            // Ghost Button: "Resisted One!"
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(92.dp)
+                        .scale(scaleSkipped)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0369A1))
+                        .pointerInput(Unit) {
+                            detectTapGestures(onPress = {
+                                isPressedSkipped = true
+                                val released = tryAwaitRelease()
+                                isPressedSkipped = false
+                                if (released) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onLogSkippedClick()
+                                }
+                            })
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = Icons.Default.Shield, contentDescription = "Resisted craving", tint = Color.White, modifier = Modifier.size(40.dp))
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = "Resisted! (Ghost)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF38BDF8))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 3. UNDO & EDIT PAST DAY (RIGHT BELOW OUR + COUNTERS)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+                onClick = onUndoClick,
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.height(34.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextSecondary)
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(text = "Undo", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
+
+            OutlinedButton(
+                onClick = { showEditPastDaysDialog = true },
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.height(34.dp)
+            ) {
+                Icon(imageVector = Icons.Default.EditCalendar, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextSecondary)
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(text = "Edit Past Day", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. "THE MIRROR" — PACE PROJECTION (BELOW UNDO AND EDIT PAST DAY)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "The Mirror — Pace Projection", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Based on your 7-day average pace:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(DarkSurfaceVariant).padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(text = "Monthly pace", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text(text = "≈ ${String.format("%.0f", summary.paceMonthlyCigs)} cigs", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    }
+                    Text(text = "→", color = TextMuted)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(text = "Annual pace", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text(text = "${CalculationUtils.formatUnits(summary.paceYearlyUnits)} units", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = AccentCoral)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 5. HEALTH RECOVERY TIMELINE (THEN HEALTH AND RECOVERY TIMELINE)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isRecoveryExpanded = !isRecoveryExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = null,
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Health Recovery Timeline",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+
+                    val smokeFreeSummaryText = remember(liveSecondsSinceLast) {
+                        if (liveSecondsSinceLast == null) "No smoke recorded"
+                        else {
+                            val h = liveSecondsSinceLast / 3600
+                            val m = (liveSecondsSinceLast % 3600) / 60
+                            if (h > 0) "${h}h ${m}m smoke-free" else "${m}m smoke-free"
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DarkSurfaceVariant)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = smokeFreeSummaryText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tangible bodily recovery milestones since your last smoke (tap to ${if (isRecoveryExpanded) "collapse" else "view all"}):",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+
+                if (isRecoveryExpanded) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HEALTH_BENEFIT_MILESTONES.forEach { milestone ->
+                            HealthMilestoneItem(
+                                milestone = milestone,
+                                liveSecondsSinceLast = liveSecondsSinceLast
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 6. CURRENT SMOKING STREAK (REVERSE PSYCHOLOGY)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -170,251 +398,6 @@ fun HomeScreen(
                         color = TextSecondary,
                         modifier = Modifier.padding(top = 2.dp)
                     )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // TODAY'S HERO DISPLAY
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Smoked counter
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "TODAY SMOKED", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                Text(text = "${summary.todayCount}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = if (summary.todayCount > 0) AccentCoral else TextPrimary)
-                Text(text = "${CalculationUtils.formatUnits(summary.todaySpentUnits)} units", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            }
-
-            // Divider
-            Box(modifier = Modifier.width(1.dp).height(50.dp).background(DarkOutline))
-
-            // Ghost Counter (Resisted cravings)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "GHOST COUNTER", style = MaterialTheme.typography.labelSmall, color = Color(0xFF38BDF8))
-                Text(text = "${summary.todaySkippedCount}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
-                Text(text = "${CalculationUtils.formatUnits(summary.todaySkippedSavedUnits)} units saved", style = MaterialTheme.typography.bodySmall, color = Color(0xFF38BDF8))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        // DUAL ACTION BUTTONS: Smoked (+) and Resisted Cravings (Ghost Counter)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Main Button: Log Cigarette
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(92.dp)
-                        .scale(scaleSmoked)
-                        .clip(CircleShape)
-                        .background(AccentCoral)
-                        .pointerInput(Unit) {
-                            detectTapGestures(onPress = {
-                                isPressedSmoked = true
-                                val released = tryAwaitRelease()
-                                isPressedSmoked = false
-                                if (released) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onLogClick()
-                                }
-                            })
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Log Smoked", tint = Color.White, modifier = Modifier.size(46.dp))
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "I Smoked", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-            }
-
-            Spacer(modifier = Modifier.width(36.dp))
-
-            // Ghost Button: "Resisted One!"
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(92.dp)
-                        .scale(scaleSkipped)
-                        .clip(CircleShape)
-                        .background(Color(0xFF0369A1))
-                        .pointerInput(Unit) {
-                            detectTapGestures(onPress = {
-                                isPressedSkipped = true
-                                val released = tryAwaitRelease()
-                                isPressedSkipped = false
-                                if (released) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onLogSkippedClick()
-                                }
-                            })
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Default.Shield, contentDescription = "Resisted craving", tint = Color.White, modifier = Modifier.size(40.dp))
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Resisted! (Ghost)", style = MaterialTheme.typography.labelSmall, color = Color(0xFF38BDF8))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Secondary controls row: Undo & Edit Past Days
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick = onUndoClick,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.height(34.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextSecondary)
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(text = "Undo", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-            }
-
-            OutlinedButton(
-                onClick = { showEditPastDaysDialog = true },
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.height(34.dp)
-            ) {
-                Icon(imageVector = Icons.Default.EditCalendar, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextSecondary)
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(text = "Edit Past Day", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 2. "THE MIRROR" — PACE PROJECTION
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.TrendingUp, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "The Mirror — Pace Projection", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Based on your 7-day average pace:",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(DarkSurfaceVariant).padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(text = "Monthly pace", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text(text = "≈ ${String.format("%.0f", summary.paceMonthlyCigs)} cigs", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                    Text(text = "→", color = TextMuted)
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(text = "Annual pace", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text(text = "${CalculationUtils.formatUnits(summary.paceYearlyUnits)} units", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = AccentCoral)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // 3. WISHLIST GOAL: Shown ONLY if name is not blank AND cost > 0
-        if (settings.wishlistName.isNotBlank() && settings.wishlistCost > 0.0) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.CardGiftcard, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Wishlist Motivation", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Goal: ${settings.wishlistName} (${CalculationUtils.formatUnits(settings.wishlistCost)} units)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(DarkSurfaceVariant).padding(10.dp)
-                    ) {
-                        Text(
-                            text = "🎧 Smoke 2 less per day = ${settings.wishlistName} in $wishlistDaysIfReduceTwo days!",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFA78BFA)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-
-        // 4. POSITIVE SHIFT TASKS
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Positive Shift Tasks", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                    Text(text = if (summary.todayCount >= 8) "Easy Micro-Habits" else "Gentle Action", style = MaterialTheme.typography.labelSmall, color = AccentAmber)
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    suggestedTasks.take(3).forEach { task ->
-                        val isDone = completedTasks.contains(task.id)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(DarkSurfaceVariant)
-                                .padding(10.dp)
-                                .pointerInput(task.id) {
-                                    detectTapGestures {
-                                        completedTasks = if (isDone) completedTasks - task.id else completedTasks + task.id
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (isDone) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                contentDescription = null,
-                                tint = if (isDone) SuccessGreen else TextMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(text = task.title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = if (isDone) TextMuted else TextPrimary)
-                                Text(text = task.description, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -523,3 +506,4 @@ fun HomeScreen(
         )
     }
 }
+

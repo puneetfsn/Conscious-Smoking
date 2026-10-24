@@ -63,7 +63,10 @@ fun SettingsScreen(
 ) {
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
-    var pinDialogInput by remember { mutableStateOf("") }
+    var oldPinInput by remember { mutableStateOf("") }
+    var newPinInput by remember { mutableStateOf("") }
+    var pinErrorMessage by remember { mutableStateOf<String?>(null) }
+    var isOldPinVerified by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var importJsonInput by remember { mutableStateOf("") }
 
@@ -269,143 +272,7 @@ fun SettingsScreen(
             }
         }
 
-        // 2. WISHLIST MOTIVATION GOAL
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.CardGiftcard, contentDescription = null, tint = Color(0xFFA78BFA), modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Wishlist Goal Setup", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Turn abstract guilt into a tangible dream. (e.g. Headphones in 34 days).", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = wishlistTitleInput,
-                    onValueChange = { onWishlistChange(it, wishlistCostInput) },
-                    label = { Text("Item Name (e.g. Wireless Headphones)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = wishlistCostInput,
-                    onValueChange = { onWishlistChange(wishlistTitleInput, it) },
-                    label = { Text("Target Cost (in units)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = onClearWishlist,
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Clear wishlist", color = TextSecondary)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onSaveWishlist,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA78BFA)),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Save Wishlist", color = Color.White)
-                    }
-                }
-            }
-        }
-
-        // POSITIVE SHIFT TASKS (Collapsible list of all tasks)
-        var isTasksExpanded by remember { mutableStateOf(false) }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { isTasksExpanded = !isTasksExpanded },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Positive Shift Tasks", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${HabitTasks.allTasks.size} tasks (tap to ${if (isTasksExpanded) "collapse" else "view all"})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                    }
-                    IconButton(onClick = { isTasksExpanded = !isTasksExpanded }) {
-                        Icon(
-                            imageVector = if (isTasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = if (isTasksExpanded) "Collapse" else "Expand",
-                            tint = TextPrimary
-                        )
-                    }
-                }
-
-                if (isTasksExpanded) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HabitTasks.allTasks.forEach { task ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(DarkSurfaceVariant)
-                                    .padding(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = task.title,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = TextPrimary,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        text = task.category,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = AccentAmber
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = task.description,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. NOTHING OS WIDGET THEME
+        // 2. NOTHING OS WIDGET THEME
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -448,26 +315,52 @@ fun SettingsScreen(
                 Text(text = "Protect data from roommates with PIN, and backup/restore without cloud.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onClick = { showPinDialog = true },
-                        shape = RoundedCornerShape(10.dp)
+                        onClick = {
+                            oldPinInput = ""
+                            newPinInput = ""
+                            pinErrorMessage = null
+                            isOldPinVerified = false
+                            showPinDialog = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (settings.pinCode.isEmpty()) "Set 4-Digit PIN" else "Change/Remove PIN")
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp), tint = AccentAmber)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (settings.pinCode.isEmpty()) "Set 4-Digit PIN Lock" else "Change / Remove PIN")
                     }
 
-                    OutlinedButton(
-                        onClick = onExportBackup,
-                        shape = RoundedCornerShape(10.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Export JSON")
-                    }
+                        OutlinedButton(
+                            onClick = onExportBackup,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF38BDF8))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export JSON", maxLines = 1)
+                        }
 
-                    OutlinedButton(
-                        onClick = { showImportDialog = true },
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Restore JSON")
+                        OutlinedButton(
+                            onClick = { showImportDialog = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF38BDF8))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Restore JSON", maxLines = 1)
+                        }
                     }
                 }
             }
@@ -588,32 +481,149 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 
-    // PIN Dialog
+    // PIN Dialog with Old PIN Verification
     if (showPinDialog) {
+        val hasExistingPin = settings.pinCode.isNotEmpty()
+
         AlertDialog(
             onDismissRequest = { showPinDialog = false },
-            title = { Text(text = "Set / Change PIN", color = TextPrimary) },
+            title = {
+                Text(
+                    text = if (!hasExistingPin) "Set 4-Digit PIN Lock" else if (!isOldPinVerified) "Enter Current PIN" else "Reset or Remove PIN",
+                    color = TextPrimary
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter a 4-digit PIN to lock Conscious Smoking. Leave empty to disable lock.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                    OutlinedTextField(
-                        value = pinDialogInput,
-                        onValueChange = { if (it.length <= 4) pinDialogInput = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (!hasExistingPin) {
+                        // Setting a brand new PIN
+                        Text(
+                            text = "Choose a 4-digit numeric PIN to secure your smoking log from others:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = newPinInput,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
+                            placeholder = { Text("4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else if (!isOldPinVerified) {
+                        // Step 1: Verify Current PIN
+                        Text(
+                            text = "Please enter your current 4-digit PIN to verify your identity:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        OutlinedTextField(
+                            value = oldPinInput,
+                            onValueChange = {
+                                if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                                    oldPinInput = it
+                                    pinErrorMessage = null
+                                }
+                            },
+                            placeholder = { Text("Current 4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            isError = pinErrorMessage != null,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (pinErrorMessage != null) {
+                            Text(
+                                text = pinErrorMessage ?: "",
+                                color = ErrorRed,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    } else {
+                        // Step 2: Old PIN Verified -> Remove or Set New PIN
+                        Text(
+                            text = "✓ Current PIN verified. You can now remove the lock or set a new PIN:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SuccessGreen
+                        )
+
+                        Button(
+                            onClick = {
+                                showPinDialog = false
+                                onSetPinCode("")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Remove PIN (Disable Lock)")
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "— OR SET A NEW 4-DIGIT PIN —",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+
+                        OutlinedTextField(
+                            value = newPinInput,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) newPinInput = it },
+                            placeholder = { Text("New 4-digit PIN") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showPinDialog = false
-                        onSetPinCode(pinDialogInput)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
-                ) {
-                    Text("Save PIN")
+                if (!hasExistingPin) {
+                    Button(
+                        onClick = {
+                            if (newPinInput.length == 4) {
+                                showPinDialog = false
+                                onSetPinCode(newPinInput)
+                            }
+                        },
+                        enabled = newPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                    ) {
+                        Text("Set PIN")
+                    }
+                } else if (!isOldPinVerified) {
+                    Button(
+                        onClick = {
+                            if (oldPinInput == settings.pinCode) {
+                                isOldPinVerified = true
+                                pinErrorMessage = null
+                            } else {
+                                pinErrorMessage = "Incorrect current PIN. Please try again."
+                            }
+                        },
+                        enabled = oldPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentCoral)
+                    ) {
+                        Text("Verify")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            if (newPinInput.length == 4) {
+                                showPinDialog = false
+                                onSetPinCode(newPinInput)
+                            }
+                        },
+                        enabled = newPinInput.length == 4,
+                        colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
+                    ) {
+                        Text("Save New PIN")
+                    }
                 }
             },
             dismissButton = {

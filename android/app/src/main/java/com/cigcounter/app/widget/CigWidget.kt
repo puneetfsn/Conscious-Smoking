@@ -374,7 +374,44 @@ class CigWidget : GlanceAppWidget() {
                     )
                 }
             }
+
+            // Top-right Refresh/Sync button to instantly synchronize widget with app DB counter
+            Box(
+                modifier = GlanceModifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                Box(
+                    modifier = GlanceModifier
+                        .size(24.dp)
+                        .background(surfaceColor)
+                        .cornerRadius(12.dp)
+                        .clickable(actionRunCallback<RefreshWidgetActionCallback>()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "↻",
+                        style = TextStyle(
+                            color = textSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+            }
         }
+    }
+}
+
+/**
+ * Action callback to instantly refresh the widget state from Room DB.
+ */
+class RefreshWidgetActionCallback : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        refreshWidget(context, glanceId)
     }
 }
 

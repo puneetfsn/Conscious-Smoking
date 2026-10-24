@@ -23,7 +23,6 @@ import {
   Heart,
   TrendingUp,
   Calculator,
-  Gift,
   Timer,
   Shield,
   FileText,
@@ -34,7 +33,12 @@ import {
   Sun,
   Moon,
   Upload,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  RotateCw,
+  Flame
 } from 'lucide-react';
 import { ANDROID_PROJECT_FILES, ProjectFile } from './androidProjectFiles.ts';
 
@@ -45,7 +49,7 @@ interface CigLog {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'preview' | 'damage_report' | 'wishlist' | 'files' | 'workflow' | 'guide'>('preview');
+  const [activeTab, setActiveTab] = useState<'preview' | 'damage_report' | 'the_mirror' | 'files' | 'workflow' | 'guide'>('preview');
 
   // Simulated Room DB State with Ghost Counter
   const [logs, setLogs] = useState<CigLog[]>(() => {
@@ -70,10 +74,6 @@ export default function App() {
   const [priceInputText, setPriceInputText] = useState<string>("10.0");
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  // Feature 6: Wishlist Goal State
-  const [wishlistTitle, setWishlistTitle] = useState<string>("Wireless Headphones");
-  const [wishlistCost, setWishlistCost] = useState<number>(5000);
-
   // Feature 7: Nothing OS Widget Theme
   const [widgetTheme, setWidgetTheme] = useState<'dark' | 'white'>('dark');
 
@@ -82,6 +82,11 @@ export default function App() {
   const [isPhoneUnlocked, setIsPhoneUnlocked] = useState<boolean>(true);
   const [pinEntered, setPinEntered] = useState<string>("");
   const [pinError, setPinError] = useState<boolean>(false);
+  const [showPinSettingsModal, setShowPinSettingsModal] = useState<boolean>(false);
+  const [oldPinVerifyInput, setOldPinVerifyInput] = useState<string>("");
+  const [newPinModalInput, setNewPinModalInput] = useState<string>("");
+  const [pinModalError, setPinModalError] = useState<string | null>(null);
+  const [isOldPinVerifiedInModal, setIsOldPinVerifiedInModal] = useState<boolean>(false);
 
   // Navigation & Modals
   const [phoneScreen, setPhoneScreen] = useState<'home' | 'history' | 'settings'>('home');
@@ -92,6 +97,11 @@ export default function App() {
   const [showDamageReportModal, setShowDamageReportModal] = useState<boolean>(false);
   const [showBackupModal, setShowBackupModal] = useState<boolean>(false);
   const [backupJsonString, setBackupJsonString] = useState<string>("");
+  const [showRestoreModal, setShowRestoreModal] = useState<boolean>(false);
+  const [restoreJsonInput, setRestoreJsonInput] = useState<string>("");
+  const [showPositiveShiftModal, setShowPositiveShiftModal] = useState<boolean>(false);
+  const [positiveShiftCount, setPositiveShiftCount] = useState<number>(0);
+  const [isRecoveryExpanded, setIsRecoveryExpanded] = useState<boolean>(true);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [isPressingPlus, setIsPressingPlus] = useState<boolean>(false);
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
@@ -171,15 +181,55 @@ export default function App() {
   const mirrorYearlyCigs = Math.round(weekDailyAvg * 365);
   const mirrorYearlyUnits = mirrorYearlyCigs * pricePerUnit;
 
-  // Feature 6: Wishlist Calculations
-  const dailyReductionBenefit = 2.0 * pricePerUnit;
-  const wishlistDays = dailyReductionBenefit > 0 ? Math.ceil(wishlistCost / dailyReductionBenefit) : 34;
+  // Reverse psychology: Consecutive smoking days
+  const consecutiveSmokingDays = (() => {
+    let streak = 0;
+    const now = new Date();
+    const checkDay = (daysAgo: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo).getTime();
+      const nextD = d + 86400000;
+      return smokedLogs.some(l => l.timestamp >= d && l.timestamp < nextD);
+    };
+    let currentCheck = todaySmoked > 0 ? 0 : 1;
+    while (checkDay(currentCheck)) {
+      streak++;
+      currentCheck++;
+    }
+    return streak;
+  })();
 
   // Logging functions
   const logCigarette = () => {
     const newLog: CigLog = { id: Date.now(), timestamp: Date.now(), isSkipped: false };
+    const nextTodaySmoked = todaySmoked + 1;
     setLogs(prev => [...prev, newLog]);
     setSnackbar("Logged 1 smoked cigarette (+1)");
+
+    // Positive Shift Tasks pop up when person hits certain cigarette count milestones (e.g. 5, 10, 15...)
+    if (nextTodaySmoked % 5 === 0) {
+      setPositiveShiftCount(nextTodaySmoked);
+      setShowPositiveShiftModal(true);
+    }
+  };
+
+  const handleRestoreJson = () => {
+    try {
+      const parsed = JSON.parse(restoreJsonInput);
+      if (Array.isArray(parsed.logs)) {
+        setLogs(parsed.logs);
+        if (typeof parsed.pricePerCigarette === 'number') {
+          setPricePerUnit(parsed.pricePerCigarette);
+          setPriceInputText(parsed.pricePerCigarette.toString());
+        }
+        setShowRestoreModal(false);
+        setRestoreJsonInput("");
+        setSnackbar(`Restored ${parsed.logs.length} logs and settings successfully!`);
+      } else {
+        setSnackbar("Invalid backup format: missing logs array.");
+      }
+    } catch {
+      setSnackbar("Failed to parse JSON backup. Check syntax.");
+    }
   };
 
   // Feature 1: Ghost Counter Log
@@ -258,8 +308,6 @@ export default function App() {
       version: "1.2.0",
       exportedAt: new Date().toISOString(),
       pricePerCigarette: pricePerUnit,
-      wishlistTitle,
-      wishlistCost,
       logs
     };
     const jsonStr = JSON.stringify(backupObj, null, 2);
@@ -401,7 +449,7 @@ export default function App() {
                 100% Offline
               </span>
             </div>
-            <p className="text-xs text-[#a1a1aa]">Ghost Counter • Damage Report PDF • The Mirror • Live Timer • Wishlist</p>
+            <p className="text-xs text-[#a1a1aa]">Ghost Counter • Damage Report PDF • The Mirror • Live Timer • Health Recovery Timeline</p>
           </div>
         </div>
 
@@ -426,13 +474,13 @@ export default function App() {
             Damage Report PDF
           </button>
           <button
-            onClick={() => setActiveTab('wishlist')}
+            onClick={() => setActiveTab('the_mirror')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              activeTab === 'wishlist' ? 'bg-[#ff6e40] text-white shadow-sm' : 'text-[#a1a1aa] hover:text-white'
+              activeTab === 'the_mirror' ? 'bg-[#ff6e40] text-white shadow-sm' : 'text-[#a1a1aa] hover:text-white'
             }`}
           >
-            <Gift className="w-3.5 h-3.5" />
-            Wishlist &amp; The Mirror
+            <TrendingUp className="w-3.5 h-3.5" />
+            The Mirror Pace
           </button>
           <button
             onClick={() => setActiveTab('files')}
@@ -563,7 +611,7 @@ export default function App() {
                         </div>
 
                         {/* HERO COUNTER: SMOKED VS GHOST COUNTER */}
-                        <div className="w-full bg-[#141418] border border-[#222228] rounded-2xl p-4 mb-5">
+                        <div className="w-full bg-[#141418] border border-[#222228] rounded-2xl p-4 mb-4">
                           <div className="grid grid-cols-2 divide-x divide-[#222228]">
                             {/* Left: Smoked */}
                             <div className="pr-3">
@@ -626,8 +674,8 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Quick Controls: Undo & FEATURE 5: Edit Past Days */}
-                        <div className="flex items-center gap-2 mb-5">
+                        {/* Quick Controls: Undo & FEATURE 5: Edit Past Days (RIGHT BELOW + COUNTERS) */}
+                        <div className="flex items-center gap-2 mb-4">
                           <button
                             onClick={undoLast}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#2a2a32] text-[11px] text-[#a1a1aa] hover:text-white hover:border-[#3f3f46] transition"
@@ -644,7 +692,7 @@ export default function App() {
                           </button>
                         </div>
 
-                        {/* FEATURE 3: "THE MIRROR" PACE PROJECTION */}
+                        {/* FEATURE 3: "THE MIRROR" PACE PROJECTION (BELOW UNDO & EDIT PAST DAY) */}
                         <div className="w-full bg-[#141418] border border-[#222228] rounded-2xl p-4 text-left mb-4">
                           <div className="flex items-center gap-2 text-[#f59e0b] mb-1">
                             <TrendingUp className="w-4 h-4" />
@@ -669,38 +717,120 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* FEATURE 6: WISHLIST MOTIVATION */}
-                        <div className="w-full bg-[#141418] border border-[#222228] rounded-2xl p-4 text-left mb-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 text-[#a78bfa]">
-                              <Gift className="w-4 h-4" />
-                              <span className="font-semibold text-xs text-white">Wishlist Dream Goal</span>
+                        {/* HEALTH RECOVERY TIMELINE (MOTIVATION ON HOMESCREEN) */}
+                        <div className="w-full bg-[#18181c] border border-[#26262e] rounded-2xl p-3.5 mb-4 text-left">
+                          <div
+                            onClick={() => setIsRecoveryExpanded(!isRecoveryExpanded)}
+                            className="flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-xl bg-[#22c55e]/15 flex items-center justify-center border border-[#22c55e]/30 shrink-0">
+                                <Heart className="w-4 h-4 text-[#22c55e] fill-[#22c55e]/20" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                  Health Recovery Timeline
+                                </div>
+                                <div className="text-[10px] text-[#a1a1aa]">
+                                  Bodily recovery since last smoke
+                                </div>
+                              </div>
                             </div>
-                            <span className="text-[10px] text-[#a78bfa] font-mono font-semibold">
-                              {formatUnits(wishlistCost)} units
-                            </span>
+
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">
+                                {elapsedSecondsSinceSmoked != null && elapsedSecondsSinceSmoked >= 3600
+                                  ? `${Math.floor(elapsedSecondsSinceSmoked / 3600)}h ${Math.floor((elapsedSecondsSinceSmoked % 3600) / 60)}m smoke-free`
+                                  : elapsedSecondsSinceSmoked != null
+                                  ? `${Math.floor(elapsedSecondsSinceSmoked / 60)}m smoke-free`
+                                  : "No smoke recorded"}
+                              </span>
+                              {isRecoveryExpanded ? (
+                                <ChevronUp className="w-3.5 h-3.5 text-[#a1a1aa]" />
+                              ) : (
+                                <ChevronDown className="w-3.5 h-3.5 text-[#a1a1aa]" />
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs font-semibold text-white mb-2">{wishlistTitle}</div>
-                          <div className="bg-[#1c192e] border border-[#a78bfa]/30 rounded-xl p-2.5 text-[11px] text-[#c4b5fd]">
-                            🎧 <strong>Smoke 2 less per day</strong> = {wishlistTitle} in <strong>{wishlistDays} days</strong>!
-                          </div>
+
+                          {isRecoveryExpanded && (
+                            <div className="mt-3 space-y-2 border-t border-[#26262e] pt-3">
+                              {[
+                                { title: "Pulse & Blood Pressure", sec: 1200, label: "20 min", desc: "Pulse and BP normalize; circulation warms." },
+                                { title: "Carbon Monoxide Drops", sec: 28800, label: "8 hours", desc: "Blood CO drops 50%; oxygen level normalizes." },
+                                { title: "Cardiac Risk & Lung Cleanse", sec: 86400, label: "24 hours", desc: "Heart attack risk falls; lungs clear debris." },
+                                { title: "Nicotine Elimination", sec: 172800, label: "48 hours", desc: "100% nicotine cleared; taste and smell sharpen." },
+                                { title: "Bronchial Relaxation", sec: 259200, label: "72 hours", desc: "Airways relax, breathing becomes effortless." },
+                                { title: "Circulation Surge", sec: 1209600, label: "2 weeks", desc: "Stamina improves up to 30%; limbs energized." }
+                              ].map((m, idx) => {
+                                const secElapsed = elapsedSecondsSinceSmoked ?? 0;
+                                const pct = Math.min(100, Math.floor((secElapsed / m.sec) * 100));
+                                const isDone = pct >= 100;
+                                return (
+                                  <div key={idx} className="bg-[#121215] border border-[#202026] rounded-xl p-2.5">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="font-semibold text-white flex items-center gap-1.5">
+                                        {isDone ? (
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-[#22c55e]" />
+                                        ) : (
+                                          <Timer className="w-3.5 h-3.5 text-[#38bdf8]" />
+                                        )}
+                                        {m.title}
+                                      </span>
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isDone ? 'bg-[#22c55e]/15 text-[#22c55e]' : 'bg-[#38bdf8]/15 text-[#38bdf8]'}`}>
+                                        {isDone ? "RESTORED" : m.label}
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-[#202028] h-1.5 rounded-full overflow-hidden mt-2">
+                                      <div
+                                        className={`h-full transition-all duration-500 ${isDone ? 'bg-[#22c55e]' : 'bg-[#38bdf8]'}`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <div className="flex justify-between text-[10px] text-[#71717a] mt-1">
+                                      <span>{m.desc}</span>
+                                      <span className="font-mono text-white/80">{pct}%</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Positive Shift Tasks */}
-                        <div className="w-full bg-[#141418] border border-[#222228] rounded-2xl p-3.5 text-left mb-4">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-semibold text-xs text-white flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-[#ff6e40]" />
-                              Positive Shift Tasks
-                            </span>
-                            <span className="text-[9px] text-[#f59e0b] bg-[#222228] px-2 py-0.5 rounded-md">
-                              {todaySmoked >= 8 ? "Micro-Habits" : "Gentle"}
-                            </span>
+                        {/* CURRENT SMOKING STREAK (REVERSE PSYCHOLOGY) */}
+                        <div className="w-full bg-[#18181c] border border-[#26262e] rounded-2xl p-3.5 mb-4 text-left flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                            consecutiveSmokingDays > 0
+                              ? 'bg-[#ff6e40]/15 border-[#ff6e40]/30 text-[#ff6e40]'
+                              : 'bg-[#22c55e]/15 border-[#22c55e]/30 text-[#22c55e]'
+                          }`}>
+                            {consecutiveSmokingDays > 0 ? (
+                              <Flame className="w-5 h-5 text-[#ff6e40]" />
+                            ) : (
+                              <CheckCircle2 className="w-5 h-5 text-[#22c55e]" />
+                            )}
                           </div>
-                          <div className="text-[10px] text-[#a1a1aa] mb-2">
-                            {todaySmoked >= 8
-                              ? "Drink 1 glass of cool water • 5 slow deep breaths • Drop shoulders"
-                              : "Call mom/friend • 10m stretch • Fresh veg juice • Gift wife"}
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-[#71717a] font-medium uppercase tracking-wider">
+                                SMOKING STREAK
+                              </span>
+                              <span className={`text-[11px] font-bold ${
+                                consecutiveSmokingDays > 0 ? 'text-[#ff6e40]' : 'text-[#22c55e]'
+                              }`}>
+                                {consecutiveSmokingDays > 0
+                                  ? `${consecutiveSmokingDays} ${consecutiveSmokingDays === 1 ? 'day' : 'days'} in a row`
+                                  : 'Chain broken!'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#a1a1aa] mt-0.5">
+                              {consecutiveSmokingDays > 0 && todaySmoked > 0
+                                ? `Chain active today (${todaySmoked} smoked). Will you break it tomorrow?`
+                                : consecutiveSmokingDays > 0 && todaySmoked === 0
+                                ? `${consecutiveSmokingDays}-day streak up to yesterday. Don't smoke today to reset to 0!`
+                                : '0 consecutive days smoked. You are keeping the chain broken!'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -830,24 +960,26 @@ export default function App() {
                             <span className="text-[10px] text-[#71717a]">{pinCode ? "Active (4 Digits)" : "Disabled"}</span>
                           </div>
                           <div className="flex gap-2">
-                            <input
-                              type="password"
-                              maxLength={4}
-                              placeholder={pinCode ? "Change PIN" : "Set 4-digit PIN"}
-                              value={pinCode}
-                              onChange={(e) => {
-                                setPinCode(e.target.value);
-                                setSnackbar(e.target.value ? "PIN enabled!" : "PIN removed");
+                            <button
+                              onClick={() => {
+                                setOldPinVerifyInput("");
+                                setNewPinModalInput("");
+                                setPinModalError(null);
+                                setIsOldPinVerifiedInModal(false);
+                                setShowPinSettingsModal(true);
                               }}
-                              className="flex-1 bg-[#1b1b22] border border-[#2a2a34] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#ff6e40]"
-                            />
+                              className="flex-1 py-2 bg-[#202028] hover:bg-[#282834] border border-[#2e2e3a] text-white rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5"
+                            >
+                              <Lock className="w-3.5 h-3.5 text-[#f59e0b]" />
+                              {pinCode ? "Change / Remove PIN" : "Set 4-Digit PIN Lock"}
+                            </button>
                             {pinCode && (
                               <button
                                 onClick={() => {
                                   setIsPhoneUnlocked(false);
                                   setSnackbar("Screen locked! Enter PIN to unlock.");
                                 }}
-                                className="px-3 py-1.5 bg-[#27272a] text-white text-xs rounded-xl hover:bg-[#3f3f46]"
+                                className="px-3 py-2 bg-[#27272a] text-white text-xs rounded-xl hover:bg-[#3f3f46] font-medium"
                               >
                                 Lock Now
                               </button>
@@ -872,19 +1004,32 @@ export default function App() {
                           </button>
                         </div>
 
-                        {/* Local Backup */}
+                        {/* Local Backup & Restore */}
                         <div className="bg-[#141418] border border-[#222228] rounded-2xl p-4 space-y-2">
                           <span className="font-semibold text-xs text-white flex items-center gap-1.5">
                             <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
                             Local JSON Backup &amp; Restore
                           </span>
-                          <p className="text-[10px] text-[#a1a1aa]">Export all your data offline without cloud access.</p>
-                          <button
-                            onClick={handleExportBackup}
-                            className="w-full py-2 bg-[#202028] hover:bg-[#282834] text-white rounded-xl text-xs font-medium border border-[#2e2e3a] transition"
-                          >
-                            Export JSON Backup File
-                          </button>
+                          <p className="text-[10px] text-[#a1a1aa]">Export and restore data completely offline.</p>
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <button
+                              onClick={handleExportBackup}
+                              className="py-2.5 px-3 bg-[#202028] hover:bg-[#282834] text-white rounded-xl text-xs font-medium border border-[#2e2e3a] transition flex items-center justify-center gap-1.5"
+                            >
+                              <Upload className="w-3.5 h-3.5 text-[#38bdf8]" />
+                              Export JSON
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRestoreJsonInput("");
+                                setShowRestoreModal(true);
+                              }}
+                              className="py-2.5 px-3 bg-[#202028] hover:bg-[#282834] text-white rounded-xl text-xs font-medium border border-[#2e2e3a] transition flex items-center justify-center gap-1.5"
+                            >
+                              <Download className="w-3.5 h-3.5 text-[#38bdf8]" />
+                              Restore JSON
+                            </button>
+                          </div>
                         </div>
 
                         {/* Cost Configuration */}
@@ -1011,11 +1156,27 @@ export default function App() {
                     ? 'bg-[#e4e4e7] border-white shadow-xl'
                     : 'bg-[#09090b] border-[#ff3b30]/40 shadow-2xl'
                 }`}>
-                  <div className={`rounded-2xl p-4 transition-colors ${
+                  <div className={`rounded-2xl p-4 transition-colors relative ${
                     widgetTheme === 'white'
                       ? 'bg-[#f4f4f5] text-[#09090b] border border-[#d4d4d8]'
                       : 'bg-[#141416] text-[#ededed] border border-[#222228]'
                   }`}>
+                    {/* Top-right Refresh/Sync button to match Glance widget */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSnackbar(`Widget synced with app counter: ${todaySmoked} smoked, ${todaySkipped} resisted`);
+                      }}
+                      title="Sync widget with app real counter"
+                      className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition active:rotate-180 duration-300 z-10 ${
+                        widgetTheme === 'white'
+                          ? 'bg-[#e4e4e7] hover:bg-[#d4d4d8] text-[#52525b]'
+                          : 'bg-[#1e1e24] hover:bg-[#27272f] text-[#a1a1aa]'
+                      }`}
+                    >
+                      <RotateCw className="w-3 h-3" />
+                    </button>
+
                     {/* Top Row: Dual Action Buttons & Stats */}
                     <div className="flex items-center gap-4">
                       {/* Left Action Buttons */}
@@ -1103,8 +1264,8 @@ export default function App() {
                     <span className="text-[#a1a1aa]">Fix yesterday's forgot-to-log entries</span>
                   </div>
                   <div className="bg-[#18181c] p-2.5 rounded-xl border border-[#26262e]">
-                    <span className="text-[#a78bfa] font-bold block">6. Wishlist Goal</span>
-                    <span className="text-[#a1a1aa]">"Headphones in 34 days" motivation</span>
+                    <span className="text-[#22c55e] font-bold block">6. Health Recovery Timeline</span>
+                    <span className="text-[#a1a1aa]">Real bodily restoration milestones</span>
                   </div>
                   <div className="bg-[#18181c] p-2.5 rounded-xl border border-[#26262e]">
                     <span className="text-white font-bold block">7. Nothing OS Theme</span>
@@ -1208,60 +1369,71 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: WISHLIST & THE MIRROR */}
-        {activeTab === 'wishlist' && (
+        {/* TAB 3: THE MIRROR */}
+        {activeTab === 'the_mirror' && (
           <div className="max-w-4xl mx-auto text-left space-y-6">
             <div className="bg-[#121216] border border-[#202026] rounded-3xl p-6">
               <h3 className="font-bold text-white text-lg flex items-center gap-2 mb-2">
-                <Gift className="w-5 h-5 text-[#a78bfa]" />
-                Wishlist Goal Calculator &amp; The Mirror Pace
+                <TrendingUp className="w-5 h-5 text-[#f59e0b]" />
+                The Mirror — Pace Projection &amp; Long-Term Impact
               </h3>
               <p className="text-xs text-[#a1a1aa] mb-6">
-                Turn abstract guilt into concrete dreams. Configure your goal item and see how small reductions yield rapid rewards.
+                Zero guilt, pure mathematics. The Mirror takes your rolling 7-day average pace and projects the numbers forward so you see reality unvarnished.
               </p>
 
-              {/* Wishlist Inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="bg-[#18181c] p-4 rounded-2xl border border-[#26262e] space-y-2">
-                  <label className="text-xs text-[#a1a1aa]">Your Dream Item</label>
-                  <input
-                    type="text"
-                    value={wishlistTitle}
-                    onChange={(e) => setWishlistTitle(e.target.value)}
-                    className="w-full bg-[#121216] border border-[#2a2a34] rounded-xl px-3 py-2 text-sm text-white"
-                  />
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-[#18181c] p-4 rounded-2xl border border-[#26262e] space-y-1">
+                  <div className="text-[11px] text-[#71717a] uppercase font-semibold">Current 7-Day Pace</div>
+                  <div className="text-2xl font-mono font-bold text-white">
+                    {weekDailyAvg.toFixed(1)} <span className="text-xs font-normal text-[#a1a1aa]">cigs / day</span>
+                  </div>
+                  <div className="text-[11px] text-[#a1a1aa]">
+                    {formatUnits(weekDailyAvg * pricePerUnit)} units daily
+                  </div>
                 </div>
-                <div className="bg-[#18181c] p-4 rounded-2xl border border-[#26262e] space-y-2">
-                  <label className="text-xs text-[#a1a1aa]">Target Cost (Units)</label>
-                  <input
-                    type="number"
-                    value={wishlistCost}
-                    onChange={(e) => setWishlistCost(Math.max(1, Number(e.target.value)))}
-                    className="w-full bg-[#121216] border border-[#2a2a34] rounded-xl px-3 py-2 text-sm text-white"
-                  />
+
+                <div className="bg-[#18181c] p-4 rounded-2xl border border-[#26262e] space-y-1">
+                  <div className="text-[11px] text-[#71717a] uppercase font-semibold">30-Day Projection</div>
+                  <div className="text-2xl font-mono font-bold text-white">
+                    ≈ {mirrorMonthlyCigs} <span className="text-xs font-normal text-[#a1a1aa]">cigs</span>
+                  </div>
+                  <div className="text-[11px] text-[#ff6e40] font-semibold">
+                    {formatUnits(mirrorMonthlyCigs * pricePerUnit)} units spent
+                  </div>
+                </div>
+
+                <div className="bg-[#18181c] p-4 rounded-2xl border border-[#26262e] space-y-1">
+                  <div className="text-[11px] text-[#71717a] uppercase font-semibold">1-Year Pace (Shock Value)</div>
+                  <div className="text-2xl font-mono font-bold text-[#ff6e40]">
+                    ≈ {mirrorYearlyCigs} <span className="text-xs font-normal text-[#a1a1aa]">cigs</span>
+                  </div>
+                  <div className="text-[11px] text-[#ff6e40] font-semibold">
+                    {formatUnits(mirrorYearlyUnits)} units / year
+                  </div>
                 </div>
               </div>
 
-              {/* Goal Timeline Breakdown */}
+              {/* Reduction Scenarios */}
               <div className="bg-[#18181c] p-5 rounded-2xl border border-[#26262e] space-y-3">
-                <h4 className="font-semibold text-white text-sm">How Fast You Reach "{wishlistTitle}":</h4>
-                <div className="space-y-2 text-xs">
+                <h4 className="font-semibold text-white text-sm">Habit Shift Scenarios:</h4>
+                <div className="space-y-2.5 text-xs">
                   <div className="flex justify-between items-center p-3 rounded-xl bg-[#202028]">
                     <span className="text-[#d4d4d8]">Smoke <strong>1 less per day</strong>:</span>
-                    <span className="font-mono font-bold text-[#a78bfa]">
-                      Reach goal in {Math.ceil(wishlistCost / pricePerUnit)} days
+                    <span className="font-mono font-bold text-[#22c55e]">
+                      Save {formatUnits(30 * pricePerUnit)} u/mo · {formatUnits(365 * pricePerUnit)} u/yr
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 rounded-xl bg-[#202028] border border-[#a78bfa]/40">
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-[#202028] border border-[#22c55e]/30">
                     <span className="text-white font-semibold">Smoke <strong>2 less per day</strong>:</span>
-                    <span className="font-mono font-bold text-[#a78bfa] text-sm">
-                      Reach goal in {wishlistDays} days!
+                    <span className="font-mono font-bold text-[#22c55e] text-sm">
+                      Save {formatUnits(60 * pricePerUnit)} u/mo · {formatUnits(730 * pricePerUnit)} u/yr!
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 rounded-xl bg-[#202028]">
-                    <span className="text-[#d4d4d8]">Quit completely today:</span>
-                    <span className="font-mono font-bold text-[#22c55e]">
-                      Reach goal in {Math.ceil(wishlistCost / (Math.max(1, weekDailyAvg) * pricePerUnit))} days
+                    <span className="text-[#d4d4d8]">Cut smoking by <strong>50%</strong>:</span>
+                    <span className="font-mono font-bold text-[#38bdf8]">
+                      Save {formatUnits((mirrorYearlyUnits / 2))} units each year
                     </span>
                   </div>
                 </div>
@@ -1549,6 +1721,211 @@ export default function App() {
               className="w-full py-2 bg-[#27272a] text-white text-xs rounded-xl"
             >
               Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RESTORE JSON BACKUP */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-50">
+          <div className="bg-[#18181c] border border-[#26262e] rounded-3xl p-6 max-w-lg w-full text-left space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#38bdf8]">
+                <Download className="w-5 h-5 text-[#38bdf8]" />
+                <h4 className="font-bold text-white text-base">Restore JSON Backup</h4>
+              </div>
+              <button onClick={() => setShowRestoreModal(false)} className="text-[#a1a1aa] hover:text-white">✕</button>
+            </div>
+            <p className="text-xs text-[#a1a1aa]">
+              Paste your exported Conscious Smoking JSON text below to restore your cigarette history and settings:
+            </p>
+            <textarea
+              value={restoreJsonInput}
+              onChange={(e) => setRestoreJsonInput(e.target.value)}
+              placeholder='Paste JSON here (e.g. {"app": "Conscious Smoking", "logs": [...]})'
+              className="w-full h-44 bg-[#0d0d10] border border-[#2a2a32] rounded-xl p-3 font-mono text-[11px] text-[#ededed] resize-none focus:outline-none focus:border-[#38bdf8]"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleRestoreJson}
+                disabled={!restoreJsonInput.trim()}
+                className="flex-1 py-2 bg-[#38bdf8] hover:bg-[#0284c7] text-black font-semibold text-xs rounded-xl transition disabled:opacity-40"
+              >
+                Restore Data Now
+              </button>
+              <button
+                onClick={() => setShowRestoreModal(false)}
+                className="px-4 py-2 bg-[#27272a] text-white text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PIN SETTINGS & OLD PIN VERIFICATION */}
+      {showPinSettingsModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-50">
+          <div className="bg-[#18181c] border border-[#26262e] rounded-3xl p-6 max-w-sm w-full text-left space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#f59e0b]">
+                <Lock className="w-5 h-5 text-[#f59e0b]" />
+                <h4 className="font-bold text-white text-base">
+                  {!pinCode ? "Set 4-Digit PIN Lock" : !isOldPinVerifiedInModal ? "Enter Current PIN" : "Reset or Remove PIN"}
+                </h4>
+              </div>
+              <button onClick={() => setShowPinSettingsModal(false)} className="text-[#a1a1aa] hover:text-white">✕</button>
+            </div>
+
+            {!pinCode ? (
+              // Setting brand new PIN
+              <div className="space-y-3">
+                <p className="text-xs text-[#a1a1aa]">
+                  Choose a 4-digit PIN to secure Conscious Smoking on your device:
+                </p>
+                <input
+                  type="password"
+                  maxLength={4}
+                  placeholder="Enter 4 digits"
+                  value={newPinModalInput}
+                  onChange={(e) => setNewPinModalInput(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-[#1b1b22] border border-[#2a2a34] rounded-xl px-3 py-2 text-sm text-center text-white tracking-widest focus:outline-none focus:border-[#ff6e40]"
+                />
+                <button
+                  onClick={() => {
+                    if (newPinModalInput.length === 4) {
+                      setPinCode(newPinModalInput);
+                      setShowPinSettingsModal(false);
+                      setSnackbar("PIN Lock enabled!");
+                    }
+                  }}
+                  disabled={newPinModalInput.length !== 4}
+                  className="w-full py-2 bg-[#ff6e40] hover:bg-[#ff8a65] text-white font-semibold text-xs rounded-xl transition disabled:opacity-40"
+                >
+                  Set PIN Lock
+                </button>
+              </div>
+            ) : !isOldPinVerifiedInModal ? (
+              // Step 1: Verify Current Old PIN
+              <div className="space-y-3">
+                <p className="text-xs text-[#a1a1aa]">
+                  Please enter your current 4-digit PIN to verify your identity before resetting:
+                </p>
+                <input
+                  type="password"
+                  maxLength={4}
+                  placeholder="Current 4-digit PIN"
+                  value={oldPinVerifyInput}
+                  onChange={(e) => {
+                    setOldPinVerifyInput(e.target.value.replace(/\D/g, ''));
+                    setPinModalError(null);
+                  }}
+                  className="w-full bg-[#1b1b22] border border-[#2a2a34] rounded-xl px-3 py-2 text-sm text-center text-white tracking-widest focus:outline-none focus:border-[#ff6e40]"
+                />
+                {pinModalError && (
+                  <p className="text-xs text-[#f87171]">{pinModalError}</p>
+                )}
+                <button
+                  onClick={() => {
+                    if (oldPinVerifyInput === pinCode) {
+                      setIsOldPinVerifiedInModal(true);
+                      setPinModalError(null);
+                    } else {
+                      setPinModalError("Incorrect current PIN. Please try again.");
+                    }
+                  }}
+                  disabled={oldPinVerifyInput.length !== 4}
+                  className="w-full py-2 bg-[#ff6e40] hover:bg-[#ff8a65] text-white font-semibold text-xs rounded-xl transition disabled:opacity-40"
+                >
+                  Verify Current PIN
+                </button>
+              </div>
+            ) : (
+              // Step 2: Old PIN Verified -> Remove PIN or Set New PIN
+              <div className="space-y-4">
+                <div className="bg-[#22c55e]/10 border border-[#22c55e]/25 text-[#22c55e] text-xs p-2.5 rounded-xl flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#22c55e] shrink-0" />
+                  <span>Current PIN verified. Choose an option:</span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPinCode("");
+                    setShowPinSettingsModal(false);
+                    setSnackbar("PIN Lock removed successfully.");
+                  }}
+                  className="w-full py-2.5 bg-[#f87171]/15 hover:bg-[#f87171]/25 border border-[#f87171]/40 text-[#f87171] font-semibold text-xs rounded-xl transition"
+                >
+                  Remove PIN (Disable Lock)
+                </button>
+
+                <div className="text-[10px] text-center text-[#71717a] uppercase tracking-wider font-semibold">
+                  — or enter new PIN —
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="New 4-digit PIN"
+                    value={newPinModalInput}
+                    onChange={(e) => setNewPinModalInput(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-[#1b1b22] border border-[#2a2a34] rounded-xl px-3 py-2 text-sm text-center text-white tracking-widest focus:outline-none focus:border-[#22c55e]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newPinModalInput.length === 4) {
+                        setPinCode(newPinModalInput);
+                        setShowPinSettingsModal(false);
+                        setSnackbar("PIN updated successfully!");
+                      }
+                    }}
+                    disabled={newPinModalInput.length !== 4}
+                    className="w-full py-2 bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-xs rounded-xl transition disabled:opacity-40"
+                  >
+                    Save New PIN
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: POSITIVE SHIFT MILESTONE POPUP */}
+      {showPositiveShiftModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-50">
+          <div className="bg-[#18181c] border border-[#26262e] rounded-3xl p-6 max-w-sm w-full text-left space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#ff6e40]">
+                <Sparkles className="w-5 h-5 text-[#ff6e40]" />
+                <h4 className="font-bold text-white text-base">
+                  Positive Shift ({positiveShiftCount} Cigs)
+                </h4>
+              </div>
+              <button onClick={() => setShowPositiveShiftModal(false)} className="text-[#a1a1aa] hover:text-white">✕</button>
+            </div>
+
+            <p className="text-xs text-[#a1a1aa]">
+              You reached <strong>{positiveShiftCount} cigarettes</strong> today. Take a gentle pause for this micro-habit:
+            </p>
+
+            <div className="bg-[#202028] border border-[#2e2e3a] rounded-2xl p-4 space-y-1.5">
+              <div className="text-sm font-bold text-[#ff6e40]">
+                Drink 1 tall glass of cool water
+              </div>
+              <div className="text-xs text-[#d4d4d8] leading-relaxed">
+                Cool water resets your palate and triggers a mild calming reflex. Drop your shoulders and take 5 slow breaths.
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowPositiveShiftModal(false)}
+              className="w-full py-2.5 bg-[#ff6e40] hover:bg-[#ff8a65] text-white font-semibold text-xs rounded-xl transition"
+            >
+              Acknowledge &amp; Continue
             </button>
           </div>
         </div>
