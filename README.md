@@ -1,4 +1,4 @@
-# 🚬 SmokeLedger
+# 🚬 Conscious Smoking
 
 [![Build Debug APK](https://github.com/puneetfsn/SmokeLedger/actions/workflows/build.yml/badge.svg)](https://github.com/puneetfsn/SmokeLedger/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
